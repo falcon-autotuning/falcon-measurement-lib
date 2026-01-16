@@ -1,0 +1,93 @@
+name: Generate and publish artifacts
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  release:
+    types: [published]
+
+env:
+  VERSION_FILE: VERSION
+  OUT_DIR: generated
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    outputs:
+      lua_tar: ${{ steps.pkg_lua.outputs.lua_tar }}
+      go_tar: ${{ steps.pkg_go.outputs.go_tar }}
+      emmy_tar: ${{ steps.pkg_emmy.outputs.emmy_tar }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.20
+
+      - name: Run make (generate + package)
+        run: |
+          make generate
+          make package-all
+
+      - name: Upload go-types artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-types
+          path: |
+            go-types-*.tar.gz
+            go-types-*.tar.gz.sha256
+
+      - name: Upload emmy-headers artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: emmy-headers
+          path: |
+            emmy-headers-*.tar.gz
+            emmy-headers-*.tar.gz.sha256
+
+      - name: Upload lua-lib artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lua-lib
+          path: |
+            lua-lib-*.tar.gz
+            lua-lib-*.tar.gz.sha256
+
+  publish_release_assets:
+    needs: generate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' && github.event.action == 'published'
+    steps:
+      - name: Download go-types artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: go-types
+          path: ./artifacts/go-types
+
+      - name: Download emmy-headers artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: emmy-headers
+          path: ./artifacts/emmy-headers
+
+      - name: Download lua-lib artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: lua-lib
+          path: ./artifacts/lua-lib
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/go-types/*.tar.gz
+            artifacts/go-types/*.sha256
+            artifacts/emmy-headers/*.tar.gz
+            artifacts/emmy-headers/*.sha256
+            artifacts/lua-lib/*.tar.gz
+            artifacts/lua-lib/*.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/instrument_target.json",
+  "title": "InstrumentTargetDefinition",
+  "description": "Reusable type for an instrument reference.",
+  "definitions": {
+    "InstrumentTarget": {
+      "type": "object",
+      "description": "InstrumentTarget represents a reference to an instrument, optionally with a channel.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Instrument identifier (e.g., \"GPI1\")"
+        },
+        "channel": {
+          "type": "integer",
+          "description": "Optional channel number"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false,
+      "x-module": "falcon_measurement_lib.instrument_target",
+      "x-methods": [
+        {
+          "name": "serialize",
+          "signature": "serialize(self: InstrumentTarget): string",
+          "description": "Serialize instrument target to 'id' or 'id:channel'."
+        }
+      ]
+    }
+  }
+}

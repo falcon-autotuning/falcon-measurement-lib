@@ -1,0 +1,5 @@
+/generated
+/*.tar.gz
+/*.sha256
+*.exe
+*.log

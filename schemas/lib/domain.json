@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/domain.json",
+  "title": "DomainDefinition",
+  "description": "Numeric domain with min/max",
+  "definitions": {
+    "Domain": {
+      "type": "object",
+      "description": "Numeric domain with min/max",
+      "properties": {
+        "min": {
+          "type": "number",
+          "description": "Minimum allowed value"
+        },
+        "max": {
+          "type": "number",
+          "description": "Maximum allowed value"
+        }
+      },
+      "required": [
+        "min",
+        "max"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

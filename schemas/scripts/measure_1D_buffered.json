@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/measure_1D_buffered.json",
+  "title": "Measure_1D_Buffered",
+  "description": "Top-level global keys used by 1D waveform scripts.",
+  "type": "object",
+  "properties": {
+    "setters": {
+      "type": "array",
+      "items": {
+        "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
+      }
+    },
+    "bufferedGetters": {
+      "type": "array",
+      "items": {
+        "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
+      }
+    },
+    "bufferedSetters": {
+      "type": "array",
+      "items": {
+        "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
+      }
+    },
+    "setVoltageDomains": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "../lib/domain.json#/definitions/Domain"
+      }
+    },
+    "sampleRate": {
+      "type": "number"
+    },
+    "numPoints": {
+      "type": "integer"
+    },
+    "numSteps": {
+      "type": "integer"
+    }
+  },
+  "additionalProperties": false
+}
