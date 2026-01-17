@@ -1,0 +1,73 @@
+commands = {}
+dependencies = {
+   dkjson = {
+      ["2.8-2"] = {
+         {
+            constraints = {
+               {
+                  op = ">=",
+                  version = {
+                     5, 1, string = "5.1"
+                  }
+               },
+               {
+                  op = "<",
+                  version = {
+                     5, 6, string = "5.6"
+                  }
+               }
+            },
+            name = "lua"
+         }
+      }
+   },
+   luafilesystem = {
+      ["1.9.0-1"] = {
+         {
+            constraints = {
+               {
+                  op = ">=",
+                  version = {
+                     5, 1, string = "5.1"
+                  }
+               }
+            },
+            name = "lua"
+         }
+      }
+   }
+}
+modules = {
+   dkjson = {
+      "dkjson/2.8-2"
+   },
+   lfs = {
+      "luafilesystem/1.9.0-1"
+   }
+}
+repository = {
+   dkjson = {
+      ["2.8-2"] = {
+         {
+            arch = "installed",
+            commands = {},
+            dependencies = {},
+            modules = {
+               dkjson = "dkjson.lua"
+            }
+         }
+      }
+   },
+   luafilesystem = {
+      ["1.9.0-1"] = {
+         {
+            arch = "installed",
+            commands = {},
+            dependencies = {},
+            modules = {
+               lfs = "lfs.so"
+            }
+         }
+      }
+   }
+}

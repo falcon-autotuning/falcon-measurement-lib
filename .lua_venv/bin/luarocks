@@ -1,0 +1,2 @@
+#!/bin/sh
+LUAROCKS_TREE=".lua_venv/lua_modules" exec luarocks --tree=".lua_venv/lua_modules" "$@"

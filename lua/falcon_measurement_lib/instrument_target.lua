@@ -33,8 +33,17 @@ local function normalize(v)
 	end
 end
 
+---@param opts table? Optional table of fields for InstrumentTarget
+---@return InstrumentTarget
+local function new(opts)
+	opts = opts or {}
+	setmetatable(opts, InstrumentTarget)
+	return opts
+end
+
 local M = {
 	InstrumentTarget = InstrumentTarget,
 	normalize = normalize,
+	new = new,
 }
 return M

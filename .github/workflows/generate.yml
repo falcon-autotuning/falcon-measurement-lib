@@ -1,4 +1,4 @@
-name: Generate and publish artifacts
+name: Generate and publish artifacts (Lua generator)
 
 on:
   push:
@@ -14,53 +14,52 @@ env:
 jobs:
   generate:
     runs-on: ubuntu-latest
-    outputs:
-      lua_tar: ${{ steps.pkg_lua.outputs.lua_tar }}
-      go_tar: ${{ steps.pkg_go.outputs.go_tar }}
-      emmy_tar: ${{ steps.pkg_emmy.outputs.emmy_tar }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: 1.20
-
-      - name: Run make (generate + package)
+      - name: Install Lua + luarocks + deps
         run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.3 luarocks
+          luarocks install luafilesystem
+          luarocks install dkjson
+
+      - name: Run generator and package
+        run: |
+          make clean || true
           make generate
           make package-all
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lua-lib
+          path: lua-lib-*.tar.gz
 
       - name: Upload go-types artifact
         uses: actions/upload-artifact@v4
         with:
           name: go-types
-          path: |
-            go-types-*.tar.gz
-            go-types-*.tar.gz.sha256
+          path: go-types-*.tar.gz
 
-      - name: Upload emmy-headers artifact
+      - name: Upload emmy artifact
         uses: actions/upload-artifact@v4
         with:
           name: emmy-headers
-          path: |
-            emmy-headers-*.tar.gz
-            emmy-headers-*.tar.gz.sha256
-
-      - name: Upload lua-lib artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: lua-lib
-          path: |
-            lua-lib-*.tar.gz
-            lua-lib-*.tar.gz.sha256
+          path: emmy-headers-*.tar.gz
 
   publish_release_assets:
     needs: generate
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
     steps:
+      - name: Download generated artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: lua-lib
+          path: ./artifacts/lua-lib
+
       - name: Download go-types artifact
         uses: actions/download-artifact@v4
         with:
@@ -73,21 +72,15 @@ jobs:
           name: emmy-headers
           path: ./artifacts/emmy-headers
 
-      - name: Download lua-lib artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: lua-lib
-          path: ./artifacts/lua-lib
-
-      - name: Upload release assets
+      - name: Attach to release
         uses: softprops/action-gh-release@v1
         with:
           files: |
+            artifacts/lua-lib/*.tar.gz
+            artifacts/lua-lib/*.sha256
             artifacts/go-types/*.tar.gz
             artifacts/go-types/*.sha256
             artifacts/emmy-headers/*.tar.gz
             artifacts/emmy-headers/*.sha256
-            artifacts/lua-lib/*.tar.gz
-            artifacts/lua-lib/*.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

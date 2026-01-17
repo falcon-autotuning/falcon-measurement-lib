@@ -2,41 +2,48 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://example.com/schemas/measure_1D_buffered.json",
   "title": "Measure_1D_Buffered",
-  "description": "Top-level global keys used by 1D waveform scripts.",
+  "description": "RuntimeContext_1DWaveform provides a context for scripts that generate and acquire 1D waveform data. This context is designed for experiments where a voltage or other parameter is swept in discrete steps, from one or more instruments. It supports configuring voltage domains, sample rates, and acquisition parameters, as well as batch operations, parallel execution, and logging. Typical use cases include time-domain measurements, pulsed experiments, and waveform acquisition synchronized with parameter sweeps.",
   "type": "object",
   "properties": {
     "setters": {
       "type": "array",
+      "description": "Instruments to write to. These are the targets whose voltages or parameters are set once during the operation.",
       "items": {
         "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
       }
     },
     "bufferedGetters": {
       "type": "array",
+      "description": "Buffered Instruments to read from. These are the sources from which waveform data will be acquired at each step.",
       "items": {
         "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
       }
     },
     "bufferedSetters": {
       "type": "array",
+      "description": "Buffered Instruments to write to. These are the targets whose voltages or parameters are set for each step in the sweep.",
       "items": {
         "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
       }
     },
     "setVoltageDomains": {
       "type": "object",
+      "description": "Voltage ranges per channel. This table maps instrument target identifiers to their allowed or intended voltage sweep domains.",
       "additionalProperties": {
         "$ref": "../lib/domain.json#/definitions/Domain"
       }
     },
     "sampleRate": {
-      "type": "number"
+      "type": "number",
+      "description": "Sampling rate in Hz. Defines the rate at which waveform data is sampled during acquisition."
     },
     "numPoints": {
-      "type": "integer"
+      "type": "integer",
+      "descriptions": "Number of points to acquire per datapoint. Specifies the length of each acquired waveform."
     },
     "numSteps": {
-      "type": "integer"
+      "type": "integer",
+      "description": "Number of steps in the waveform. Determines how many discrete parameter values will be swept."
     }
   },
   "additionalProperties": false

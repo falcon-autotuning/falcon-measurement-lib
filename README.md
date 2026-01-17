@@ -32,7 +32,6 @@ Central repository for measurement JSON schemas, runtime Lua helper modules, Emm
   - `schemas/scripts/` — script-level context schemas (globals)
 - Runtime modules are hand-authored under `lua/falcon_measurement_lib/` and deployed as the runtime library.
 - The generator reads the schemas and emits Go and Emmy outputs only (no runtime Lua generation).
-- The `instrument-script-server` is configured (via env var) to point to the extracted runtime library directory. It preloads modules from that directory.
 
 See docs/ for more details on adding new schemas and modules.
 

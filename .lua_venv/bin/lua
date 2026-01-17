@@ -1,0 +1,2 @@
+#!/bin/sh
+LUA_PATH=".lua_venv/lua_modules/share/lua/5.4/?.lua;.lua_venv/lua_modules/share/lua/5.4/?/init.lua;;" LUA_CPATH=".lua_venv/lua_modules/lib/lua/5.4/?.so;;" exec lua "$@"
