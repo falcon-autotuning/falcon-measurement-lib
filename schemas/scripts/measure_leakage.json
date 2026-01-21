@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "title": "Measure_Leakage",
+  "description": "Provides a context for scripts that measure leakage of their quantum dot devices.",
+  "additionalProperties": false,
+  "properties": {
+    "getter": {
+      "description": "The instrument (and channel) to collect the applied voltage from",
+      "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
+    },
+    "voltage": {
+      "description": "The voltage to apply to raise the gate voltage above ground in V.",
+      "type": "number"
+    }
+  },
+  "returns": {
+    "description": "Leakage of the getter in nA.",
+    "type": "number"
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/measure_get_set.json"
+}
