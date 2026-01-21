@@ -35,7 +35,7 @@ venv-clean:
 generate: venv
 	@echo "Running Lua generator..."
 	@mkdir -p $(OUT_DIR)
-	@LUA_PATH="$(LUA_VENV_TREE)/share/lua/5.4/?.lua;$(LUA_VENV_TREE)/share/lua/5.4/?/init.lua;;" LUA_CPATH="$(LUA_VENV_TREE)/lib/lua/5.4/?.so;;" lua ./generator/gen_from_schemas.lua ./schemas/lib ./schemas/scripts $(SRC_LUA_DIR) $(OUT_DIR)
+	@LUA_PATH="$(LUA_VENV_TREE)/share/lua/5.4/?.lua;$(LUA_VENV_TREE)/share/lua/5.4/?/init.lua;;" LUA_CPATH="$(LUA_VENV_TREE)/lib/lua/5.4/?.so;;" $(LUA_VENV_BIN)/lua ./generator/gen_from_schemas.lua ./schemas/lib ./schemas/scripts $(SRC_LUA_DIR) $(OUT_DIR)
 
 package-lua:
 	@echo "Packaging generated lua library..."

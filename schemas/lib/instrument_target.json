@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://example.com/schemas/instrument_target.json",
-  "title": "InstrumentTargetDefinition",
-  "description": "Reusable type for an instrument reference.",
+  "title": "InstrumentTarget",
+  "description": "InstrumentTarget represents a reference to an instrument, optionally with a channel.",
   "definitions": {
     "InstrumentTarget": {
       "type": "object",

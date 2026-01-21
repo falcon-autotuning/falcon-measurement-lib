@@ -1,11 +1,11 @@
 -- generator/gen_from_schemas.lua
 -- Usage:
---   lua generator/gen_from_schemas.lua <lib-schemas-dir> <script-schemas-dir> <source-lua-dir> <out-dir>
+--   lua generator/gen_from_schemas.lua <lib-schemas-dir> <script-schemas-dir> <source-lua-dir> <out-dir> [--no-generated-lua]
 -- Example:
---   lua generator/gen_from_schemas.lua ./schemas/lib ./schemas/scripts ./lua ./generated
+--   lua generator/gen_from_schemas.lua ./schemas/lib ./schemas/scripts ./lua ./generated --no-generated-lua
 --
--- Emits combined Emmy+implementation modules in generated/lua/ with a generic .new constructor,
--- plus editor-only generated/emmy/ files and generated/go-types/.
+-- Emits editor-only generated/emmy/, generated/go-types/, and (if installed) generated/teal/.
+-- Optionally emits generated/lua/ runtime modules unless --no-generated-lua is provided.
 --
 -- Requires: luafilesystem (lfs) and dkjson
 local ok, lfs = pcall(require, "lfs")
@@ -15,6 +15,12 @@ end
 local json_ok, json = pcall(require, "dkjson")
 if not json_ok then
 	error("dkjson is required. Install with: luarocks install dkjson")
+end
+
+-- Attempt to load Teal emitter (optional)
+local ok_teal, teal_emitter = pcall(require, "generator.teal_emitter")
+if not ok_teal then
+	teal_emitter = nil
 end
 
 local io_open = io.open
@@ -364,7 +370,6 @@ local function generate_combined_module(modulePath, defName, def, outLuaRoot)
 	table.insert(sb, "  opts = opts or {}")
 	table.insert(sb, ("  setmetatable(opts, %s)"):format(protoName))
 	table.insert(sb, "  return opts")
-	table.insert(sb, "end")
 	table.insert(sb, "")
 	table.insert(sb, ("%s.new = M.new"):format(protoName))
 	table.insert(sb, "")
@@ -414,15 +419,19 @@ local function emit_emmy_file(modulePath, defName, def, outDir)
 				emmyt = "string"
 			end
 			if jst == "array" then
-				emmyt = "any[]"
+				table.insert(
+					sb,
+					string.format("---@field %s any[] %s", pk, as_string(pp.description or pp["description"]))
+				)
+			else
+				if jst == "object" then
+					emmyt = "table"
+				end
+				table.insert(
+					sb,
+					string.format("---@field %s %s %s", pk, emmyt, as_string(pp.description or pp["description"]))
+				)
 			end
-			if jst == "object" then
-				emmyt = "table"
-			end
-			table.insert(
-				sb,
-				string.format("---@field %s %s %s", pk, emmyt, as_string(pp.description or pp["description"]))
-			)
 		end
 	end
 	if def and def["x-methods"] then
@@ -455,68 +464,6 @@ local function emit_emmy_file(modulePath, defName, def, outDir)
 	table.insert(sb, "")
 	table.insert(sb, "return {}")
 	write_file(filename, table.concat(sb, "\n"))
-end
-
--- Emit per-script emmy files
-local function emit_emmy_scripts(scripts, outDir)
-	local base = outDir .. path_sep .. "emmy" .. path_sep .. "scripts"
-	ensure_dir(base)
-	for _, s in ipairs(scripts) do
-		local title = as_string(s.title or s["title"])
-		if title == "" then
-			title = (s._schema_filename and s._schema_filename:gsub("%.json$", "")) or "ScriptContext"
-		end
-		local name = title:gsub(" ", "_"):lower()
-		local filename = base .. path_sep .. name .. "_emmy.lua"
-		local sb = {}
-		table.insert(sb, "---@meta")
-		if s.description then
-			table.insert(sb, ("--- %s"):format(s.description))
-		end
-		table.insert(sb, string.format("---@class %s", title))
-		if s.properties then
-			local keys = {}
-			for k, _ in pairs(s.properties) do
-				table.insert(keys, k)
-			end
-			table.sort(keys)
-			for _, pk in ipairs(keys) do
-				local pp = s.properties[pk]
-				local jst = as_string(pp.type or pp["type"])
-				local emmyt = "any"
-				if jst == "number" then
-					emmyt = "number"
-				end
-				if jst == "integer" then
-					emmyt = "integer"
-				end
-				if jst == "string" then
-					emmyt = "string"
-				end
-				if jst == "array" then
-					if pp.items and pp.items["$ref"] then
-						local ref = as_string(pp.items["$ref"])
-						local parts = {}
-						for part in ref:gmatch("[^/]+") do
-							table.insert(parts, part)
-						end
-						emmyt = parts[#parts] .. "[]"
-					else
-						emmyt = "any[]"
-					end
-				end
-				if jst == "object" then
-					emmyt = "table"
-				end
-				table.insert(
-					sb,
-					string.format("---@field %s %s %s", pk, emmyt, as_string(pp.description or pp["description"]))
-				)
-			end
-		end
-		table.insert(sb, "\nreturn {}")
-		write_file(filename, table.concat(sb, "\n"))
-	end
 end
 
 -- Generate Go types & helpers (single-file)
@@ -623,19 +570,35 @@ end
 -- Main --------------------------------------------------------------------
 
 local function usage_and_exit()
-	print("usage: lua generator/gen_from_schemas.lua <lib-schemas-dir> <script-schemas-dir> <source-lua-dir> <out-dir>")
+	print(
+		"usage: lua generator/gen_from_schemas.lua <lib-schemas-dir> <script-schemas-dir> <source-lua-dir> <out-dir> [--no-generated-lua]"
+	)
 	os.exit(2)
 end
 
-local args = { ... }
-if #args < 4 then
+-- Simple CLI args parsing: positional args plus optional flags (e.g., --no-generated-lua)
+local raw_args = { ... }
+local flags = {}
+local posargs = {}
+for _, v in ipairs(raw_args) do
+	if tostring(v):match("^%-%-") then
+		flags[v] = true
+	else
+		table.insert(posargs, v)
+	end
+end
+
+if #posargs < 4 then
 	usage_and_exit()
 end
 
-local libDir = args[1]
-local scriptsDir = args[2]
-local sourceLuaDir = args[3]
-local outDir = args[4]
+local libDir = posargs[1]
+local scriptsDir = posargs[2]
+local sourceLuaDir = posargs[3]
+local outDir = posargs[4]
+
+-- default: generate lua outputs; pass --no-generated-lua to disable
+local generate_lua = not flags["--no-generated-lua"]
 
 local libSchemas = read_schema_dir(libDir)
 local scriptSchemas = read_schema_dir(scriptsDir)
@@ -647,29 +610,39 @@ if file_exists(outDir) then
 end
 ensure_dir(outDir)
 
--- generated lua root
+-- generated lua root (only if enabled)
 local generatedLuaRoot = outDir .. path_sep .. "lua"
-ensure_dir(generatedLuaRoot)
+if generate_lua then
+	ensure_dir(generatedLuaRoot)
+else
+	io.stderr:write("generator: skipping generated/lua output (--no-generated-lua)\n")
+end
 
--- For each def, either annotate & copy source module or generate combined module
+-- For each def: optionally create generated/lua implementations, but ALWAYS emit emmy headers
 for defName, def in pairs(defs) do
 	local modulePath = modules[defName] or ("falcon_measurement_lib." .. string.lower(defName))
 	local rel = path_from_module(modulePath)
 	local srcCandidate = sourceLuaDir .. path_sep .. rel
-	if file_exists(srcCandidate) then
-		local ok, err = copy_and_annotate_source_module(sourceLuaDir, generatedLuaRoot, modulePath, defName, def)
-		if not ok then
-			error("copy annotate failed: " .. tostring(err))
+	if generate_lua then
+		if file_exists(srcCandidate) then
+			local ok, err = copy_and_annotate_source_module(sourceLuaDir, generatedLuaRoot, modulePath, defName, def)
+			if not ok then
+				error("copy annotate failed: " .. tostring(err))
+			end
+		else
+			generate_combined_module(modulePath, defName, def, generatedLuaRoot)
 		end
-	else
-		generate_combined_module(modulePath, defName, def, generatedLuaRoot)
 	end
-	-- also produce editor-only emmy file for compatibility
+	-- always produce editor-only emmy file for compatibility
 	emit_emmy_file(modulePath, defName, def, outDir)
 end
 
--- Emit per-script emmy files
-emit_emmy_scripts(scriptSchemas, outDir)
+-- Emit Teal script scaffolds (if teal emitter available)
+if teal_emitter then
+	teal_emitter.emit_scripts(scriptSchemas, defs, modules, sourceLuaDir, outDir)
+else
+	io.stderr:write("generator: teal_emitter not available; skipping teal outputs\n")
+end
 
 -- Generate go types and helpers
 generate_go_types_and_helpers(defs, scriptSchemas, outDir)
