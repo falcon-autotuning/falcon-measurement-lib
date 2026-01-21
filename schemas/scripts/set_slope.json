@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "title": "Set_Slope",
+  "description": "Sets a slope applied to a target",
+  "additionalProperties": false,
+  "properties": {
+    "setter": {
+      "description": "The instrument (and channel) to apply the slope to. The slope is the DC ramp slope of the gate bias voltage.",
+      "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
+    },
+    "slope": {
+      "description": "The slope to apply in V/sec. Defines the rate at which waveform data is sloped when ramped.",
+      "type": "number"
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/get_voltage.json"
+}

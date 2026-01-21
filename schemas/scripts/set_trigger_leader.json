@@ -1,17 +1,13 @@
 {
   "type": "object",
-  "title": "Get_Voltage",
-  "description": "Gets a voltage applied to a target",
+  "title": "Set_Trigger_Leader",
+  "description": "Sets the synchronous triggered leader DAC",
   "additionalProperties": false,
   "properties": {
     "getter": {
-      "description": "The instrument (and channel) to collect the applied voltage from",
+      "description": "The instrument (and channel) to set to be the leader. The leader is in charge of syncing with the ADC and triggering the rest of the measurements.",
       "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
     }
-  },
-  "returns": {
-    "description": "The numeric value gotten in V.",
-    "type": "number"
   },
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://example.com/schemas/get_voltage.json"

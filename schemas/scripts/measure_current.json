@@ -1,0 +1,28 @@
+{
+  "type": "object",
+  "title": "Measure_Current",
+  "description": "Provides a context for scripts that perform DC get operations. This context is typically used for scripts that need to set outputs and acquire data points from instruments in a coordinated way.",
+  "additionalProperties": false,
+  "properties": {
+    "sampleRate": {
+      "description": "Sampling rate in Hz. Defines the rate at which waveform data is sampled during acquisition.",
+      "type": "number"
+    },
+    "getters": {
+      "items": {
+        "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
+      },
+      "description": "Instruments to read from.",
+      "type": "array"
+    }
+  },
+  "returns": {
+    "additionalProperties": {
+      "type": "number"
+    },
+    "description": "Map from getter identifier to a numeric value in nA. Keys are getter identifiers.",
+    "type": "object"
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/measure_get_set.json"
+}

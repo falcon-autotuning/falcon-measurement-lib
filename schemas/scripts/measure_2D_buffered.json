@@ -1,78 +1,78 @@
 {
-  "type":"object",
-  "title":"Measure_2D_Buffered",
-  "description":"provides a context for scripts that generate and acquire 2D waveform data. This context is designed for experiments where a two voltages or other parameters are swept in discrete steps, from one or more instruments. It supports configuring voltage domains, sample rates, and acquisition parameters, as well as batch operations, parallel execution, and logging. Typical use cases include time-domain measurements, pulsed experiments, and waveform acquisition synchronized with parameter sweeps.",
-  "additionalProperties":false,
-  "properties":{
-    "bufferedXSetters":{
-      "items":{
-        "$ref":"../lib/instrument_target.json#/definitions/InstrumentTarget"
+  "type": "object",
+  "title": "Measure_2D_Buffered",
+  "description": "provides a context for scripts that generate and acquire 2D waveform data. This context is designed for experiments where a two voltages or other parameters are swept in discrete steps, from one or more instruments. It supports configuring voltage domains, sample rates, and acquisition parameters, as well as batch operations, parallel execution, and logging. Typical use cases include time-domain measurements, pulsed experiments, and waveform acquisition synchronized with parameter sweeps.",
+  "additionalProperties": false,
+  "properties": {
+    "bufferedXSetters": {
+      "items": {
+        "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
       },
-      "description":"Buffered Instruments to write to. These are the targets whose voltages or parameters are set for each step in the x sweep.",
-      "type":"array"
+      "description": "Buffered Instruments to write to. These are the targets whose voltages or parameters are set for each step in the x sweep.",
+      "type": "array"
     },
-    "sampleRate":{
-      "description":"Sampling rate in Hz. Defines the rate at which waveform data is sampled during acquisition.",
-      "type":"number"
+    "sampleRate": {
+      "description": "Sampling rate in Hz. Defines the rate at which waveform data is sampled during acquisition.",
+      "type": "number"
     },
-    "bufferedGetters":{
-      "items":{
-        "$ref":"../lib/instrument_target.json#/definitions/InstrumentTarget"
+    "bufferedGetters": {
+      "items": {
+        "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
       },
-      "description":"Buffered Instruments to read from. These are the sources from which waveform data will be acquired at each step.",
-      "type":"array"
+      "description": "Buffered Instruments to read from. These are the sources from which waveform data will be acquired at each step.",
+      "type": "array"
     },
-    "bufferedYSetters":{
-      "items":{
-        "$ref":"../lib/instrument_target.json#/definitions/InstrumentTarget"
+    "bufferedYSetters": {
+      "items": {
+        "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
       },
-      "description":"Buffered Instruments to write to. These are the targets whose voltages or parameters are set for each step in the y sweep.",
-      "type":"array"
+      "description": "Buffered Instruments to write to. These are the targets whose voltages or parameters are set for each step in the y sweep.",
+      "type": "array"
     },
-    "numXSteps":{
-      "description":"Number of steps in the x axis waveform. Determines how many discrete parameter values will be swept.",
-      "type":"integer"
+    "numXSteps": {
+      "description": "Number of steps in the x axis waveform. Determines how many discrete parameter values will be swept.",
+      "type": "integer"
     },
-    "setYVoltageDomains":{
-      "additionalProperties":{
-        "$ref":"../lib/domain.json#/definitions/Domain"
+    "setYVoltageDomains": {
+      "additionalProperties": {
+        "$ref": "../lib/domain.json#/definitions/Domain"
       },
-      "description":"Y Voltage ranges per channel. This table maps instrument target identifiers to their allowed or intended voltage sweep domains.",
-      "type":"object"
+      "description": "Y Voltage ranges per channel. This table maps instrument target identifiers to their allowed or intended voltage sweep domains.",
+      "type": "object"
     },
-    "setXVoltageDomains":{
-      "additionalProperties":{
-        "$ref":"../lib/domain.json#/definitions/Domain"
+    "setXVoltageDomains": {
+      "additionalProperties": {
+        "$ref": "../lib/domain.json#/definitions/Domain"
       },
-      "description":"X Voltage ranges per channel. This table maps instrument target identifiers to their allowed or intended voltage sweep domains.",
-      "type":"object"
+      "description": "X Voltage ranges per channel. This table maps instrument target identifiers to their allowed or intended voltage sweep domains.",
+      "type": "object"
     },
-    "numPoints":{
-      "descriptions":"Number of points to acquire per datapoint. Specifies the length of each acquired waveform.",
-      "type":"integer"
+    "numPoints": {
+      "descriptions": "Number of points to acquire per datapoint. Specifies the length of each acquired waveform.",
+      "type": "integer"
     },
-    "numYSteps":{
-      "description":"Number of steps in the y axis waveform. Determines how many discrete parameter values will be swept.",
-      "type":"integer"
+    "numYSteps": {
+      "description": "Number of steps in the y axis waveform. Determines how many discrete parameter values will be swept.",
+      "type": "integer"
     },
-    "setters":{
-      "items":{
-        "$ref":"../lib/instrument_target.json#/definitions/InstrumentTarget"
+    "setters": {
+      "items": {
+        "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
       },
-      "description":"Instruments to write to. These are the targets whose voltages or parameters are set once during the operation.",
-      "type":"array"
+      "description": "Instruments to write to. These are the targets whose voltages or parameters are set once during the operation.",
+      "type": "array"
     }
   },
-  "returns":{
-    "additionalProperties":{
-      "items":{
-        "type":"number"
+  "returns": {
+    "additionalProperties": {
+      "items": {
+        "type": "number"
       },
-      "type":"array"
+      "type": "array"
     },
-    "description":"Map from getter identifier to an array of numeric values (buffered). Keys are getter identifiers.",
-    "type":"object"
+    "description": "Map from getter identifier to an array of numeric values in nA (buffered). Keys are getter identifiers.",
+    "type": "object"
   },
-  "$schema":"http://json-schema.org/draft-07/schema#",
-  "$id":"https://example.com/schemas/measure_2D_buffered.json"
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/measure_2D_buffered.json"
 }

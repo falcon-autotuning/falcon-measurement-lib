@@ -1,15 +1,15 @@
 {
   "type": "object",
-  "title": "Set_Voltage",
-  "description": "Sets a voltage applied to a target",
+  "title": "Set_Sample_Rate",
+  "description": "Sets the sample rate on the ADC",
   "additionalProperties": false,
   "properties": {
-    "setter": {
-      "description": "The instrument (and channel) to set the applied voltage to",
+    "getter": {
+      "description": "The instrument (and channel) to collect the sample rate from.",
       "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
     },
-    "setVoltage": {
-      "description": "The voltage value to set in V",
+    "sampleRate": {
+      "description": "The sample rate to set in units of samples/msec.",
       "type": "number"
     }
   },

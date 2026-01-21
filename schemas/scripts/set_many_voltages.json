@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "title": "Set_Many_Voltages",
+  "description": "Sets many voltages applied to targets",
+  "additionalProperties": false,
+  "properties": {
+    "setters": {
+      "items": {
+        "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
+      },
+      "description": "Instruments to write to.",
+      "type": "array"
+    },
+    "setVoltages": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "description": "Table mapping instrument target identifiers (as strings) to voltage values to set in V.",
+      "type": "object"
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/get_voltage.json"
+}

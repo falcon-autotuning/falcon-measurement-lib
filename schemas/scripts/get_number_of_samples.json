@@ -1,16 +1,16 @@
 {
   "type": "object",
-  "title": "Get_Voltage",
-  "description": "Gets a voltage applied to a target",
+  "title": "Get_Number_Of_Samples",
+  "description": "Gets the number of samples of the ADC",
   "additionalProperties": false,
   "properties": {
     "getter": {
-      "description": "The instrument (and channel) to collect the applied voltage from",
+      "description": "The instrument (and channel) to collect the number of samples from",
       "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
     }
   },
   "returns": {
-    "description": "The numeric value gotten in V.",
+    "description": "The numeric value gotten.",
     "type": "number"
   },
   "$schema": "http://json-schema.org/draft-07/schema#",

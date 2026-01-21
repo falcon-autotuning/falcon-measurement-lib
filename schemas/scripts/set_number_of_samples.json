@@ -1,15 +1,15 @@
 {
   "type": "object",
-  "title": "Set_Voltage",
-  "description": "Sets a voltage applied to a target",
+  "title": "Set_Number_Of_Samples",
+  "description": "Sets the number of samples of the ADC",
   "additionalProperties": false,
   "properties": {
-    "setter": {
-      "description": "The instrument (and channel) to set the applied voltage to",
+    "getter": {
+      "description": "The instrument (and channel) to collect the number of samples from",
       "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
     },
-    "setVoltage": {
-      "description": "The voltage value to set in V",
+    "numberOfSamples": {
+      "description": "The number of samples to set.",
       "type": "number"
     }
   },
