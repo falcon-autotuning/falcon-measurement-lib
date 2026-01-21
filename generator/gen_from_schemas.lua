@@ -1,11 +1,15 @@
 -- generator/gen_from_schemas.lua
 -- Usage:
 --   lua generator/gen_from_schemas.lua <lib-schemas-dir> <script-schemas-dir> <source-lua-dir> <out-dir> [--no-generated-lua]
--- Example:
---   lua generator/gen_from_schemas.lua ./schemas/lib ./schemas/scripts ./lua ./generated --no-generated-lua
 --
--- Emits editor-only generated/emmy/, generated/go-types/, and (if installed) generated/teal/.
--- Optionally emits generated/lua/ runtime modules unless --no-generated-lua is provided.
+-- This version:
+--  - Emits editor-only Emmy headers (generated/emmy/)
+--  - Emits Go types (generated/go-types/)
+--  - Emits Teal "typing" modules (generated/teal/.../*.tl) for each schema definition. These
+--    are typing-only modules that `require` the runtime Lua implementation and expose
+--    Teal `record` types + signature-only function declarations so `tl`/Teal LSP can typecheck scripts.
+--  - Emits Teal script scaffolds (generated/teal/scripts/*.tl) via generator/teal_emitter.lua.
+--  - Optionally emits generated/lua/ runtime copies (default behavior), disable with --no-generated-lua.
 --
 -- Requires: luafilesystem (lfs) and dkjson
 local ok, lfs = pcall(require, "lfs")
@@ -17,7 +21,6 @@ if not json_ok then
 	error("dkjson is required. Install with: luarocks install dkjson")
 end
 
--- Attempt to load Teal emitter (optional)
 local ok_teal, teal_emitter = pcall(require, "generator.teal_emitter")
 if not ok_teal then
 	teal_emitter = nil
@@ -222,6 +225,14 @@ local function path_from_module(modulePath)
 	return table.concat(parts, path_sep) .. ".lua"
 end
 
+local function module_path_to_fs(modulePath)
+	local parts = {}
+	for p in modulePath:gmatch("[^.]+") do
+		table.insert(parts, p)
+	end
+	return table.concat(parts, path_sep)
+end
+
 -- Build Emmy header text. Always include a constructor field `new`.
 local function build_emmy_header(modulePath, defName, def)
 	local parts = {}
@@ -324,8 +335,6 @@ local function copy_and_annotate_source_module(src_root, dst_root, modulePath, d
 end
 
 -- Generate a combined Emmy header + implementation for missing modules.
--- The prototype uses the CamelCase defName (if provided) so the constructor and methods
--- are attached to the same prototype that Emmy documents.
 local function generate_combined_module(modulePath, defName, def, outLuaRoot)
 	local rel = path_from_module(modulePath)
 	local dest = outLuaRoot .. path_sep .. rel
@@ -339,9 +348,7 @@ local function generate_combined_module(modulePath, defName, def, outLuaRoot)
 		table.insert(parts, p)
 	end
 
-	-- Use defName (CamelCase) for the prototype variable if present; otherwise use module leaf
 	local protoName = defName or parts[#parts]
-	-- sanitize protoName to be a valid Lua identifier (basic): replace non-alphanum with underscore
 	protoName = protoName:gsub("[^%w_]", "_")
 
 	local sb = {}
@@ -353,7 +360,7 @@ local function generate_combined_module(modulePath, defName, def, outLuaRoot)
 	table.insert(sb, ("%s.__index = %s"):format(protoName, protoName))
 	table.insert(sb, "")
 
-	-- Methods: implement x-methods on prototype and expose them on M for LSP visibility
+	-- Methods
 	if def and def["x-methods"] and type(def["x-methods"]) == "table" then
 		for _, m in ipairs(def["x-methods"]) do
 			local name = as_string(m.name)
@@ -363,7 +370,7 @@ local function generate_combined_module(modulePath, defName, def, outLuaRoot)
 		end
 	end
 
-	-- generic constructor placed BEFORE return
+	-- constructor
 	table.insert(sb, ("---@param opts table? Optional table of fields for %s"):format(protoName))
 	table.insert(sb, ("---@return %s"):format(protoName))
 	table.insert(sb, "function M.new(opts)")
@@ -464,6 +471,168 @@ local function emit_emmy_file(modulePath, defName, def, outDir)
 	table.insert(sb, "")
 	table.insert(sb, "return {}")
 	write_file(filename, table.concat(sb, "\n"))
+end
+
+-- Helper: extract name from $ref like ../lib/instrument_target.json#/definitions/InstrumentTarget
+local function ref_to_name(ref)
+	if not ref then
+		return nil
+	end
+	local last = nil
+	for part in tostring(ref):gmatch("[^/#]+") do
+		last = part
+	end
+	return tostring(last)
+end
+
+-- Write Teal typing module (.tl) for a def (typing-only)
+local function write_teal_typing_for_def(modulePath, defName, def, outDir)
+	local fs = module_path_to_fs(modulePath)
+	local dest = outDir .. path_sep .. "teal" .. path_sep .. fs .. ".tl"
+	ensure_dir(dest:match("(.+)" .. path_sep) or ".")
+	local sb = {}
+	table.insert(sb, "-- GENERATED TEAL TYPES - DO NOT EDIT")
+	table.insert(sb, ("local _impl = require(%q)"):format(modulePath))
+	table.insert(sb, "")
+
+	-- record
+	table.insert(sb, ("record %s"):format(defName))
+	if def and def.properties then
+		local keys = {}
+		for k, _ in pairs(def.properties) do
+			table.insert(keys, k)
+		end
+		table.sort(keys)
+		for _, k in ipairs(keys) do
+			local p = def.properties[k]
+			local t = "any"
+			if p["$ref"] then
+				t = ref_to_name(p["$ref"])
+			elseif p.type == "number" then
+				t = "number"
+			elseif p.type == "integer" then
+				t = "integer"
+			elseif p.type == "string" then
+				t = "string"
+			elseif p.type == "boolean" then
+				t = "boolean"
+			elseif p.type == "array" then
+				if p.items and p.items["$ref"] then
+					t = "{ " .. ref_to_name(p.items["$ref"]) .. " }"
+				elseif p.items and p.items.type then
+					local it = p.items.type
+					if it == "number" then
+						t = "{ number }"
+					elseif it == "string" then
+						t = "{ string }"
+					else
+						t = "{ any }"
+					end
+				else
+					t = "{ any }"
+				end
+			elseif p.type == "object" then
+				t = "table"
+			else
+				t = "any"
+			end
+
+			local optional = "?"
+			if def.required then
+				local found = false
+				for _, r in ipairs(def.required) do
+					if r == k then
+						found = true
+						break
+					end
+				end
+				if found then
+					optional = ""
+				end
+			end
+
+			table.insert(sb, ("  %s: %s%s"):format(k, t, optional))
+		end
+	end
+	table.insert(sb, "end")
+	table.insert(sb, "")
+
+	-- constructor signature (attach to runtime impl)
+	table.insert(sb, ("function _impl.new(opts?: table): %s end"):format(defName))
+
+	-- x-methods signature placeholders
+	if def and def["x-methods"] then
+		for _, m in ipairs(def["x-methods"]) do
+			local name = as_string(m.name)
+			table.insert(sb, ("function _impl.%s(...): any end"):format(name))
+		end
+	end
+
+	table.insert(sb, "")
+	table.insert(sb, "return _impl")
+	write_file(dest, table.concat(sb, "\n"))
+end
+
+-- Emit per-script emmy files
+local function emit_emmy_scripts(scripts, outDir)
+	local base = outDir .. path_sep .. "emmy" .. path_sep .. "scripts"
+	ensure_dir(base)
+	for _, s in ipairs(scripts) do
+		local title = as_string(s.title or s["title"])
+		if title == "" then
+			title = (s._schema_filename and s._schema_filename:gsub("%.json$", "")) or "ScriptContext"
+		end
+		local name = title:gsub(" ", "_"):lower()
+		local filename = base .. path_sep .. name .. "_emmy.lua"
+		local sb = {}
+		table.insert(sb, "---@meta")
+		if s.description then
+			table.insert(sb, ("--- %s"):format(s.description))
+		end
+		table.insert(sb, string.format("---@class %s", title))
+		if s.properties then
+			local keys = {}
+			for k, _ in pairs(s.properties) do
+				table.insert(keys, k)
+			end
+			table.sort(keys)
+			for _, pk in ipairs(keys) do
+				local pp = s.properties[pk]
+				local jst = as_string(pp.type or pp["type"])
+				local emmyt = "any"
+				if jst == "number" then
+					emmyt = "number"
+				end
+				if jst == "integer" then
+					emmyt = "integer"
+				end
+				if jst == "string" then
+					emmyt = "string"
+				end
+				if jst == "array" then
+					if pp.items and pp.items["$ref"] then
+						local ref = as_string(pp.items["$ref"])
+						local parts = {}
+						for part in ref:gmatch("[^/]+") do
+							table.insert(parts, part)
+						end
+						emmyt = parts[#parts] .. "[]"
+					else
+						emmyt = "any[]"
+					end
+				end
+				if jst == "object" then
+					emmyt = "table"
+				end
+				table.insert(
+					sb,
+					string.format("---@field %s %s %s", pk, emmyt, as_string(pp.description or pp["description"]))
+				)
+			end
+		end
+		table.insert(sb, "\nreturn {}")
+		write_file(filename, table.concat(sb, "\n"))
+	end
 end
 
 -- Generate Go types & helpers (single-file)
@@ -576,7 +745,7 @@ local function usage_and_exit()
 	os.exit(2)
 end
 
--- Simple CLI args parsing: positional args plus optional flags (e.g., --no-generated-lua)
+-- CLI args parsing: positional args plus optional flags (e.g., --no-generated-lua)
 local raw_args = { ... }
 local flags = {}
 local posargs = {}
@@ -618,7 +787,7 @@ else
 	io.stderr:write("generator: skipping generated/lua output (--no-generated-lua)\n")
 end
 
--- For each def: optionally create generated/lua implementations, but ALWAYS emit emmy headers
+-- For each def: optionally create generated/lua implementations, always emit emmy headers and teal typing modules (.tl)
 for defName, def in pairs(defs) do
 	local modulePath = modules[defName] or ("falcon_measurement_lib." .. string.lower(defName))
 	local rel = path_from_module(modulePath)
@@ -635,7 +804,12 @@ for defName, def in pairs(defs) do
 	end
 	-- always produce editor-only emmy file for compatibility
 	emit_emmy_file(modulePath, defName, def, outDir)
+	-- always produce typed Teal companion (.tl) for the def
+	write_teal_typing_for_def(modulePath, defName, def, outDir)
 end
+
+-- Emit per-script emmy files
+emit_emmy_scripts(scriptSchemas, outDir)
 
 -- Emit Teal script scaffolds (if teal emitter available)
 if teal_emitter then
