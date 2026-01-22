@@ -1,4 +1,6 @@
 name: Generate, package, and publish release
+permissions:
+  contents: write
 
 on:
   workflow_dispatch:
@@ -67,19 +69,81 @@ jobs:
           ls -la lua-lib-${{ env.VERSION }}.tar.gz go-types-${{ env.VERSION }}.tar.gz emmy-headers-${{ env.VERSION }}.tar.gz || true
         shell: bash
 
-      - name: Create / update GitHub Release and upload assets
-        # ncipollo/release-action is simple: it will create or update the release and attach files
-        uses: ncipollo/release-action@v1
+      - name: Read version file
+        id: read_version
+        run: |
+          if [ ! -f "$VERSION_FILE" ]; then
+            echo "VERSION file missing"
+            exit 1
+          fi
+          VERSION="$(cat $VERSION_FILE | tr -d '[:space:]')"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "::set-output name=version::$VERSION"
+        shell: bash
+
+      - name: Ensure package files exist
+        run: |
+          set -e
+          echo "Looking for expected package files (based on VERSION=${{ env.VERSION }})"
+          for f in lua-lib-${{ env.VERSION }}.tar.gz go-types-${{ env.VERSION }}.tar.gz emmy-headers-${{ env.VERSION }}.tar.gz generated-${{ env.VERSION }}.tar.gz; do
+            if [ ! -f "$f" ]; then
+              echo "Missing expected file: $f"
+              ls -la || true
+              exit 1
+            fi
+          done
+        shell: bash
+
+      - name: Create GitHub release
+        id: create_release
+        uses: actions/create-release@v1
         with:
-          tag: v${{ env.VERSION }}
-          name: Release v${{ env.VERSION }}
+          tag_name: v${{ env.VERSION }}
+          release_name: Release v${{ env.VERSION }}
           body: |
             Automated generated artifacts for version v${{ env.VERSION }}.
             This release contains generated runtime Lua modules, Emmy headers, and Go types.
-          files: |
-            lua-lib-${{ env.VERSION }}.tar.gz
-            go-types-${{ env.VERSION }}.tar.gz
-            emmy-headers-${{ env.VERSION }}.tar.gz
-            generated-${{ env.VERSION }}.tar.gz
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload lua package asset
+        uses: softprops/action-upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: lua-lib-${{ env.VERSION }}.tar.gz
+          asset_name: lua-lib-${{ env.VERSION }}.tar.gz
+          asset_content_type: application/gzip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload go package asset
+        uses: softprops/action-upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: go-types-${{ env.VERSION }}.tar.gz
+          asset_name: go-types-${{ env.VERSION }}.tar.gz
+          asset_content_type: application/gzip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload emmy package asset
+        uses: softprops/action-upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: emmy-headers-${{ env.VERSION }}.tar.gz
+          asset_name: emmy-headers-${{ env.VERSION }}.tar.gz
+          asset_content_type: application/gzip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload full generated tarball
+        uses: softprops/action-upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: generated-${{ env.VERSION }}.tar.gz
+          asset_name: generated-${{ env.VERSION }}.tar.gz
+          asset_content_type: application/gzip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
