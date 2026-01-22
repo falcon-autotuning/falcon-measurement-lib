@@ -15,32 +15,7 @@ Central repository for measurement JSON schemas, runtime Lua helper modules, Emm
   - lua-lib-<VERSION>.tar.gz — runtime Lua modules (deploy to servers)
   - go-types-<VERSION>.tar.gz — generated Go files (for compiler)
   - emmy-headers-<VERSION>.tar.gz — Emmy header files (for editor LSP)
-
-## New: Teal integration and typed script returns
-
-This repository now supports generating Teal scaffolds for script schemas. The new features are:
-
-- Teal scaffolds are emitted into `generated/teal/scripts/` as `.teal` files. Each script schema becomes a Teal file that:
-  - Declares the shared `RuntimeContext` record.
-  - Emits expanded-parameter `function main(ctx: RuntimeContext, ...)` signatures (one parameter per script schema property).
-  - Emits a typed return signature derived from the schema's top-level `returns` JSON Schema (see below).
-  - References runtime Teal modules (if present) instead of duplicating type definitions. If a runtime `.teal` module is not present for a referenced type (e.g. `InstrumentTarget`), a minimal `record` stub will be emitted so the generated Teal still typechecks.
-
-- Script-level `returns` support:
-  - Script JSON schemas can include a top-level `returns` node describing what `main` should return.
-  - Typical convention used by the emitter:
-    - Non-buffered scripts (single-value per getter) should use:
-      "returns": { "type": "object", "additionalProperties": { "type": "number" } }
-      which maps to Teal: `{ [string]: number }`
-    - Buffered scripts (per-getter arrays) should use:
-      "returns": { "type": "object", "additionalProperties": { "type": "array", "items": {"type":"number"} } }
-      which maps to Teal: `{ [string]: { number } }` (a map of string -> array of numbers)
-  - The generator emits a `-- @return` docline and a typed function return in the Teal scaffold, e.g.:
-    function main(ctx: RuntimeContext, bufferedGetters: {InstrumentTarget}, sampleRate: number): { [string]: { number } }
-
-- Backwards compatibility & why keys are strings:
-  - Return maps are keyed by string identifiers (e.g. serialized InstrumentTarget ids). InstrumentTarget objects are typically serialized at runtime (see `InstrumentTarget:serialize`) and string-keyed maps are interoperable with Lua and Teal indexer types.
-  - If you prefer a different key type (e.g. indexer keyed by a record type), we can adjust the emitter, but string keys are the conventional and robust choice.
+  - teal-<VERSION>.tar.gz — Teal files (for user editor pre-compilation)
 
 ## Quick start (developer)
 

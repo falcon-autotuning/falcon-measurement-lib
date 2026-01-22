@@ -49,6 +49,12 @@ jobs:
           name: emmy-headers
           path: emmy-headers-*.tar.gz
 
+      - name: Upload teal artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: teal
+          path: teal-*.tar.gz
+
   publish_release_assets:
     needs: generate
     runs-on: ubuntu-latest
@@ -72,6 +78,12 @@ jobs:
           name: emmy-headers
           path: ./artifacts/emmy-headers
 
+      - name: Download teal artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: teal
+          path: ./artifacts/teal
+
       - name: Attach to release
         uses: softprops/action-gh-release@v1
         with:
@@ -82,5 +94,7 @@ jobs:
             artifacts/go-types/*.sha256
             artifacts/emmy-headers/*.tar.gz
             artifacts/emmy-headers/*.sha256
+            artifacts/teal/*.tar.gz
+            artifacts/teal/*.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
