@@ -76,6 +76,36 @@ jobs:
             fi
           done
         shell: bash
+      - name: Remove existing release for this tag (if any)
+        uses: actions/github-script@v6
+        env:
+          VERSION: ${{ env.VERSION }}
+        with:
+          script: |
+            const tag = `v${process.env.VERSION}`;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            try {
+              const existing = await github.rest.repos.getReleaseByTag({
+                owner,
+                repo,
+                tag,
+              });
+              console.log(`Found existing release id=${existing.data.id} for tag ${tag}, deleting it...`);
+              await github.rest.repos.deleteRelease({
+                owner,
+                repo,
+                release_id: existing.data.id,
+              });
+              console.log('Release deleted.');
+            } catch (err) {
+              if (err.status === 404) {
+                console.log(`No existing release for tag ${tag}.`);
+              } else {
+                // Re-throw other errors so the job fails and you can inspect the log
+                throw err;
+              }
+            }
 
       - name: Create GitHub release
         id: create_release
