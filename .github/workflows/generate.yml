@@ -16,38 +16,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install system packages (Lua 5.4 + luarocks + build tools)
+      - name: Install Lua 5.4 and prepare PATH
         run: |
           sudo apt-get update
-          # Install Lua 5.4 and dev headers, plus luarocks and build tools.
-          # If lua5.4 is not available by the package cache, this will fail and you can revert
-          # to the Makefile-detection approach below.
-          sudo apt-get install -y lua5.4 liblua5.4-dev luarocks make build-essential libreadline-dev tar gzip
-          # Make sure `lua` and `luac` point to lua5.4
-          if [ -x /usr/bin/lua5.4 ]; then
-            sudo update-alternatives --install /usr/bin/lua lua /usr/bin/lua5.4 60
-            sudo update-alternatives --set lua /usr/bin/lua5.4 || true
-          fi
-          if [ -x /usr/bin/luac5.4 ]; then
-            sudo update-alternatives --install /usr/bin/luac luac /usr/bin/luac5.4 60
-            sudo update-alternatives --set luac /usr/bin/luac5.4 || true
-          fi
-        shell: bash
+          sudo apt-get install -y lua5.4 liblua5.4-dev luarocks build-essential make libreadline-dev tar gzip
+          mkdir -p ./ci-bin
+          ln -sf /usr/bin/lua5.4 ./ci-bin/lua
+          ln -sf /usr/bin/luac5.4 ./ci-bin/luac
+          ln -sf $(which luarocks) ./ci-bin/luarocks
+          export PATH="$PWD/ci-bin:$PATH"
+          echo "PATH=$PATH" >> $GITHUB_ENV
+          lua -v
+          luarocks --version
 
-      - name: Show lua/luarocks versions (debug)
+      - name: Run Makefile
         run: |
-          echo "Which lua:"
-          which lua || true
-          lua -v || true
-          echo
-          echo "luarocks:"
-          luarocks --version || true
-        shell: bash
-
-      - name: Run Makefile to create venv, generate, and package
-        # Makefile's default `all` target runs: venv -> generate -> package-all
-        run: |
-          # Make is invoked from repository root; Makefile uses VERSION file
           make all
         shell: bash
 
