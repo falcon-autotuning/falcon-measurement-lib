@@ -80,6 +80,8 @@ jobs:
       - name: Create GitHub release
         id: create_release
         uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: v${{ env.VERSION }}
           release_name: Release v${{ env.VERSION }}
@@ -88,7 +90,6 @@ jobs:
             This release contains generated runtime Lua modules, Emmy headers, and Go types.
           draft: false
           prerelease: false
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload lua package asset (official action)
         uses: actions/upload-release-asset@v1
