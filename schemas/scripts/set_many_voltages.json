@@ -1,4 +1,6 @@
 {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/get_voltage.json",
   "type": "object",
   "title": "Set_Many_Voltages",
   "description": "Sets many voltages applied to targets",
@@ -18,7 +20,5 @@
       "description": "Table mapping instrument target identifiers (as strings) to voltage values to set in V.",
       "type": "object"
     }
-  },
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://example.com/schemas/get_voltage.json"
+  }
 }

@@ -1,4 +1,6 @@
 {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/get_voltage.json",
   "type": "object",
   "title": "Get_Many_Voltages",
   "description": "Gets many  voltages applied to a target",
@@ -13,12 +15,18 @@
     }
   },
   "returns": {
-    "additionalProperties": {
-      "type": "number"
-    },
-    "description": "Map from getter identifier to a numeric value in V. Keys are getter identifiers.",
-    "type": "object"
-  },
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://example.com/schemas/get_voltage.json"
+    "type": "array",
+    "description": "List of MeasurementResponse with a numeric value in V.",
+    "items": {
+      "allOf": [
+        {
+          "$ref": "../lib/measurement_response.json#/definitions/MeasurementResponse"
+        },
+        {
+          "description": "Annotates the concrete type of the MeasurementResponse value",
+          "x-valueType": "number"
+        }
+      ]
+    }
+  }
 }

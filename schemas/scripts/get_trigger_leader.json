@@ -1,4 +1,6 @@
 {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/get_voltage.json",
   "type": "object",
   "title": "Get_Trigger_Leader",
   "description": "Gets the synchronous triggered leader DAC",
@@ -11,8 +13,14 @@
   },
   "returns": {
     "description": "The numeric value gotten in units of V/sec.",
-    "type": "bool"
-  },
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://example.com/schemas/get_voltage.json"
+    "allOf": [
+      {
+        "$ref": "../lib/measurement_response.json#/definitions/MeasurementResponse"
+      },
+      {
+        "description": "Annotates the concrete type of the MeasurementResponse value",
+        "x-valueType": "boolean"
+      }
+    ]
+  }
 }

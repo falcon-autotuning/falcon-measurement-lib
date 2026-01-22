@@ -1,4 +1,6 @@
 {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/measure_leakage.json",
   "type": "object",
   "title": "Measure_Leakage",
   "description": "Provides a context for scripts that measure leakage of their quantum dot devices.",
@@ -15,8 +17,14 @@
   },
   "returns": {
     "description": "Leakage of the getter in nA.",
-    "type": "number"
-  },
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://example.com/schemas/measure_get_set.json"
+    "allOf": [
+      {
+        "$ref": "../lib/measurement_response.json#/definitions/MeasurementResponse"
+      },
+      {
+        "description": "Annotates the concrete type of the MeasurementResponse value",
+        "x-valueType": "number"
+      }
+    ]
+  }
 }

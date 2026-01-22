@@ -1,4 +1,6 @@
 {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/measure_get_set.json",
   "type": "object",
   "title": "Measure_Get_Set",
   "description": "Provides a context for scripts that perform DC get/set operations. It allows setting voltages on specified instruments and reading values from others, supporting batch operations, parallel execution, and logging. This context is typically used for scripts that need to set outputs and acquire data points from instruments in a coordinated way.",
@@ -35,12 +37,18 @@
     }
   },
   "returns": {
-    "additionalProperties": {
-      "type": "number"
-    },
-    "description": "Map from getter identifier to a numeric value in nA. Keys are getter identifiers.",
-    "type": "object"
-  },
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://example.com/schemas/measure_get_set.json"
+    "type": "array",
+    "description": "List of MeasurementResponse with a numeric value in nA.",
+    "items": {
+      "allOf": [
+        {
+          "$ref": "../lib/measurement_response.json#/definitions/MeasurementResponse"
+        },
+        {
+          "description": "Annotates the concrete type of the MeasurementResponse value",
+          "x-valueType": "number"
+        }
+      ]
+    }
+  }
 }

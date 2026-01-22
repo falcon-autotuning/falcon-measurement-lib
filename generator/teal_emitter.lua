@@ -1,9 +1,29 @@
 -- generator/teal_emitter.lua
 -- Emits Teal (.tl) script scaffolds with expanded-parameter `main(ctx, ...)` signatures
--- and typed return signatures when schema.returns is present.
--- Script filenames end with .tl to be recognized by tl / Teal LSP.
+-- and strictly-enforced typed return signatures derived from script schema.top-level `returns`.
 --
--- Usage: require("generator.teal_emitter").emit_scripts(scriptSchemas, defs, modules, sourceLuaDir, outDir)
+-- Enforced preferred patterns:
+-- 1) Array of MeasurementResponse:
+--    returns.type = "array"
+--    returns.items = {
+--      allOf = [
+--        { "$ref": "../lib/measurement_response.json#/definitions/MeasurementResponse" },
+--        { "x-valueType": "number" }
+--      ]
+--    }
+--
+-- 2) Single MeasurementResponse:
+--    returns = {
+--      allOf = [
+--        { "$ref": "../lib/measurement_response.json#/definitions/MeasurementResponse" },
+--        { "x-valueType": "number" }
+--      ]
+--    }
+--
+-- 3) No returns: schema may omit `returns` entirely — interpreted as `: nil` (valid).
+--
+-- If a script schema includes a `returns` node but it does not match one of the preferred
+-- patterns the emitter will error and stop generation.
 
 local M = {}
 
@@ -16,16 +36,6 @@ local function ensure_dir(p)
 	end
 	os.execute(("mkdir -p %q"):format(p))
 	return true
-end
-
-local function read_file(path)
-	local f, err = io_open(path, "rb")
-	if not f then
-		return nil, err
-	end
-	local d = f:read("*a")
-	f:close()
-	return d
 end
 
 local function write_file(path, content)
@@ -42,229 +52,192 @@ local function write_file(path, content)
 	return true
 end
 
-local function ref_to_name(ref)
-	if not ref then
-		return nil
+local function title_to_filename(title, fallback)
+	local name = title or fallback or "script"
+	name = name:gsub("%s+", "_"):gsub("[^%w_%-]", ""):lower()
+	if not name:match("%.tl$") then
+		name = name .. ".tl"
 	end
-	local last = nil
-	for part in tostring(ref):gmatch("[^/#]+") do
-		last = part
-	end
-	return tostring(last)
-end
-
-local function is_array_prop(pp)
-	if type(pp) ~= "table" then
-		return false
-	end
-	return pp.type == "array"
-end
-
-local function field_type_string(pp)
-	if not pp then
-		return "any"
-	end
-	if pp["$ref"] then
-		return ref_to_name(pp["$ref"])
-	end
-	if is_array_prop(pp) then
-		local items = pp.items
-		if items and items["$ref"] then
-			return ref_to_name(items["$ref"]) .. "[]"
-		elseif items and items.type then
-			return (items.type == "integer" and "integer" or items.type) .. "[]"
-		else
-			return "any[]"
-		end
-	end
-	if pp.type then
-		local t = pp.type
-		if t == "integer" then
-			return "integer"
-		end
-		if t == "number" then
-			return "number"
-		end
-		if t == "string" then
-			return "string"
-		end
-		if t == "boolean" then
-			return "boolean"
-		end
-		if t == "object" then
-			return "table"
-		end
-		if t == "array" then
-			return "any[]"
-		end
-		return "any"
-	end
-	return "any"
-end
-
-local function teal_type_for_prop(pp)
-	local t = field_type_string(pp)
-	if t:match("%[%]$") then
-		local elem = t:gsub("%[%]$", "")
-		return "{" .. elem .. "}"
-	end
-	if t == "integer" or t == "number" or t == "string" or t == "boolean" or t == "table" or t == "any" then
-		return t
-	end
-	return t
+	return name
 end
 
 local function sanitize_comment(s)
 	if not s then
 		return ""
 	end
-	s = tostring(s):gsub("\r\n", "\n"):gsub("\n$", "")
-	s = s:gsub("%-%-%]", "%-%- %]")
-	return s
+	return (s:gsub("\n", " "):gsub("%s+", " "):gsub("%s+$", ""))
 end
 
-local function title_to_filename(title, fallback)
-	local name = ""
-	if title and #title > 0 then
-		name = title:gsub("%s+", "_"):gsub("[^%w_%-]", ""):lower()
-	else
-		name = (fallback or "script"):gsub("%s+", "_"):lower()
-	end
-	return name .. ".tl" -- use .tl for Teal files
+local function fail_schema(schema, reason)
+	local id = schema._schema_filename or schema.title or "<unknown>"
+	error(("teal_emitter: schema %s: %s"):format(id, reason))
 end
 
-local function emit_runtime_context_block()
-	return table.concat({
-		"-- RuntimeContext (shared)",
-		"record RuntimeContext",
-		"  log: function(RuntimeContext, string): nil",
-		"  call: function(RuntimeContext, string, table): any",
-		"  error: function(RuntimeContext, string): nil",
-		"  parallel: function(RuntimeContext, function()): nil",
-		"end",
-		"",
-	}, "\n")
-end
-
-local function module_path_to_fs(modulePath)
-	local parts = {}
-	for p in modulePath:gmatch("[^.]+") do
-		table.insert(parts, p)
-	end
-	return table.concat(parts, path_sep)
-end
-
-local function teal_type_for_schema_node(node)
-	if not node then
-		return "any"
-	end
-	if node["$ref"] then
-		return ref_to_name(node["$ref"])
-	end
-	if node.type == "array" then
-		local it = node.items
-		local elem = teal_type_for_schema_node(it)
-		return "{" .. elem .. "}"
-	end
-	if node.type == "object" then
-		if node.additionalProperties then
-			local val = teal_type_for_schema_node(node.additionalProperties)
-			return ("{ [string]: %s }"):format(val)
-		end
-		return "table"
-	end
-	if node.type == "number" then
+-- Map a simple JSON Schema primitive to a Teal primitive
+local function map_primitive(js_type)
+	if js_type == "number" then
 		return "number"
 	end
-	if node.type == "integer" then
-		return "integer"
-	end
-	if node.type == "string" then
+	if js_type == "string" then
 		return "string"
 	end
-	if node.type == "boolean" then
+	if js_type == "boolean" then
 		return "boolean"
+	end
+	if js_type == "buffer" then
+		return "buffer"
+	end
+	-- allow union forms like "number|string": return as-is (Teal supports `number | string`)
+	if type(js_type) == "string" and js_type:find("|", 1, true) then
+		return js_type
 	end
 	return "any"
 end
 
-local function collect_fields(schema)
-	local out = {}
-	if not schema or not schema.properties then
-		return out
+-- extract x-valueType (or x-measurementValueType) from a schema object or from an allOf array
+local function extract_x_valueType_from_obj(obj)
+	if type(obj) ~= "table" then
+		return nil
 	end
-	local keys = {}
-	for k, _ in pairs(schema.properties) do
-		table.insert(keys, k)
+	if obj["x-valueType"] then
+		return obj["x-valueType"]
 	end
-	table.sort(keys)
-	for _, k in ipairs(keys) do
-		local pp = schema.properties[k]
-		local tstr = field_type_string(pp)
-		table.insert(out, {
-			name = k,
-			type = tstr,
-			description = pp.description or pp["description"] or "",
-			required = false,
-		})
+	if obj["x-measurementValueType"] then
+		return obj["x-measurementValueType"]
 	end
-	return out
+	return nil
 end
 
--- Prefer a Teal typing module if present either in sourceLuaDir (.tl) or in generated output (outDir/teal/*.tl)
-local function has_teal_module_for(defName, modules, sourceLuaDir, outDir)
-	local mod = modules[defName]
-	if not mod then
-		return false
+local function extract_x_valueType_from_allOf(allOf)
+	if type(allOf) ~= "table" then
+		return nil
 	end
-	local fs = module_path_to_fs(mod)
-	-- source .tl
-	local candidate1 = sourceLuaDir .. path_sep .. fs .. ".tl"
-	local f1 = io.open(candidate1, "rb")
-	if f1 then
-		f1:close()
-		return true
-	end
-	-- generated .tl
-	if outDir and outDir ~= "" then
-		local candidate2 = outDir .. path_sep .. "teal" .. path_sep .. fs .. ".tl"
-		local f2 = io.open(candidate2, "rb")
-		if f2 then
-			f2:close()
-			return true
+	for _, part in ipairs(allOf) do
+		local vt = extract_x_valueType_from_obj(part)
+		if vt then
+			return vt
+		end
+		-- also allow part.type primitive as fallback (not preferred)
+		if part.type and (part.type == "number" or part.type == "string" or part.type == "boolean") then
+			return part.type
 		end
 	end
-	-- fallback: older .teal (if present)
-	local candidate3 = sourceLuaDir .. path_sep .. fs .. ".teal"
-	local f3 = io.open(candidate3, "rb")
-	if f3 then
-		f3:close()
-		return true
+	return nil
+end
+
+-- Check whether an allOf array contains a $ref to MeasurementResponse (heuristic: $ref exists
+-- and references "MeasurementResponse" or "measurement_response")
+local function has_measurement_ref(allOf)
+	if type(allOf) ~= "table" then
+		return false
 	end
-	local candidate4 = outDir .. path_sep .. "teal" .. path_sep .. fs .. ".teal"
-	local f4 = io.open(candidate4, "rb")
-	if f4 then
-		f4:close()
-		return true
+	for _, part in ipairs(allOf) do
+		if type(part) == "table" and part["$ref"] and type(part["$ref"]) == "string" then
+			local ref = part["$ref"]
+			if ref:match("MeasurementResponse") or ref:match("measurement_response") then
+				return true
+			end
+		end
 	end
 	return false
 end
 
-local function emit_record_stub(name, fields)
-	local out = {}
-	table.insert(out, ("-- Minimal stub for %s (generated)"):format(name))
-	table.insert(out, ("record %s"):format(name))
-	for _, f in ipairs(fields or {}) do
-		local t = teal_type_for_prop(f)
-		local comment = ""
-		if f.description and #f.description > 0 then
-			comment = " -- " .. sanitize_comment(f.description)
-		end
-		table.insert(out, ("  %s: %s%s"):format(f.name, t, comment))
+-- Determine the Teal return type for a script schema `schema.returns`.
+-- Enforces preferred patterns only and fails (returns nil + caller must error) otherwise.
+-- Returns:
+--   ret_teal_type (string), is_collection (boolean)
+local function determine_return_teal_type_strict(returns_schema, schema)
+	-- Allowed: no returns declared — interpreted as : nil
+	if returns_schema == nil then
+		return "nil", false
 	end
-	table.insert(out, "end")
-	table.insert(out, "")
-	return table.concat(out, "\n")
+
+	if type(returns_schema) ~= "table" then
+		fail_schema(
+			schema,
+			"invalid 'returns' node. Expected preferred pattern using allOf + x-valueType or omit returns for no-return scripts."
+		)
+	end
+
+	-- Preferred: array of MeasurementResponse with allOf + x-valueType and a $ref to MeasurementResponse
+	if returns_schema.type == "array" and type(returns_schema.items) == "table" then
+		local items = returns_schema.items
+		if type(items.allOf) ~= "table" then
+			fail_schema(
+				schema,
+				"returns.type == 'array' requires returns.items.allOf to be present and contain MeasurementResponse $ref + x-valueType."
+			)
+		end
+		local vt = extract_x_valueType_from_allOf(items.allOf)
+		if not vt then
+			fail_schema(
+				schema,
+				'returns.items.allOf missing \'x-valueType\' annotation. Use allOf with { "$ref": "...MeasurementResponse" } and { "x-valueType": "number" }.'
+			)
+		end
+		if not has_measurement_ref(items.allOf) then
+			fail_schema(
+				schema,
+				"returns.items.allOf missing $ref to MeasurementResponse. Use the canonical MeasurementResponse definition by $ref."
+			)
+		end
+		return string.format("MeasurementResponses<%s>", map_primitive(vt)), true
+	end
+
+	-- Preferred: single MeasurementResponse via allOf + x-valueType + $ref
+	if type(returns_schema.allOf) == "table" then
+		local vt = extract_x_valueType_from_allOf(returns_schema.allOf)
+		if not vt then
+			fail_schema(
+				schema,
+				'returns.allOf missing \'x-valueType\' annotation. Use allOf with { "$ref": "...MeasurementResponse" } and { "x-valueType": "number" }.'
+			)
+		end
+		if not has_measurement_ref(returns_schema.allOf) then
+			fail_schema(
+				schema,
+				"returns.allOf missing $ref to MeasurementResponse. Use the canonical MeasurementResponse definition by $ref."
+			)
+		end
+		return string.format("MeasurementResponse<%s>", map_primitive(vt)), false
+	end
+
+	-- Nothing matched — fail loudly
+	fail_schema(
+		schema,
+		"returns shape not recognized. Expected preferred patterns (array-of-MeasurementResponse allOf + x-valueType OR single-MeasurementResponse allOf + x-valueType), or omit 'returns' for no-return scripts."
+	)
+end
+
+-- convert a schema property to a Teal type (used for generating parameter annotations)
+local function teal_type_for_prop(p)
+	local jst = nil
+	if not p then
+		return "any"
+	end
+	if p.type then
+		jst = p.type
+	end
+	-- array -> { [number]: <item type> } but frequently item type is a $ref (we fallback to table)
+	if jst == "array" then
+		if p.items and p.items.type then
+			return string.format("{ %s }", map_primitive(p.items.type))
+		end
+		return "{ [number]: table }"
+	end
+	if jst == "object" then
+		return "table"
+	end
+	if jst == "number" then
+		return "number"
+	end
+	if jst == "string" then
+		return "string"
+	end
+	if jst == "boolean" then
+		return "boolean"
+	end
+	return "any"
 end
 
 local function emit_teal_for_script(schema, defs, modules, sourceLuaDir, outDir)
@@ -277,126 +250,87 @@ local function emit_teal_for_script(schema, defs, modules, sourceLuaDir, outDir)
 		table.insert(parts, ("-- %s"):format(sanitize_comment(schema.description)))
 	end
 	table.insert(parts, "")
+	table.insert(
+		parts,
+		"-- NOTE: Ensure runtime teal definitions (runtime_context.tl) are available to the typechecker"
+	)
+	table.insert(parts, "")
 
-	table.insert(parts, emit_runtime_context_block())
+	-- Emit RuntimeContext reference placeholder (consumer should provide runtime_context.tl)
+	table.insert(parts, "local RuntimeContext = {} -- runtime context type must be provided by runtime teal module")
+	table.insert(parts, "")
 
-	local fields = collect_fields(schema)
-
-	-- collect referenced record names
-	local ref_names = {}
-	for _, f in ipairs(fields) do
-		local nm = tostring(f.type):gsub("%[%]$", "")
-		if nm:match("^[A-Z]") then
-			if not ref_names[nm] then
-				ref_names[nm] = true
-			end
+	-- Build parameter list
+	local params = {}
+	if schema.properties and type(schema.properties) == "table" then
+		-- sort keys for deterministic output
+		local keys = {}
+		for k, _ in pairs(schema.properties) do
+			table.insert(keys, k)
 		end
-	end
-
-	-- Emit requires for referenced typing modules when available
-	for name, _ in pairs(ref_names) do
-		local mod = modules[name] or ("falcon_measurement_lib." .. name:lower())
-		local emits_req = false
-		local fs = module_path_to_fs(mod)
-		local candidate1 = sourceLuaDir .. path_sep .. fs .. ".tl"
-		local f1 = io.open(candidate1, "rb")
-		if f1 then
-			f1:close()
-			emits_req = true
-		end
-		local candidate2 = outDir .. path_sep .. "teal" .. path_sep .. fs .. ".tl"
-		local f2 = io.open(candidate2, "rb")
-		if f2 then
-			f2:close()
-			emits_req = true
-		end
-
-		if emits_req then
-			table.insert(parts, ("local %s = require(%q)"):format(name, mod))
-		end
-	end
-
-	if next(ref_names) then
-		table.insert(parts, "")
-	end
-
-	-- Emit stubs or notes for referenced record types (prefer teal typing module if available)
-	for name, _ in pairs(ref_names) do
-		local skip_stub = has_teal_module_for(name, modules, sourceLuaDir, outDir)
-		if not skip_stub then
-			local def = defs[name]
-			if def and def.properties then
-				local stub_fields = {}
-				for pk, pv in pairs(def.properties) do
-					table.insert(stub_fields, {
-						name = pk,
-						type = field_type_string(pv),
-						description = pv.description or pv["description"] or "",
-					})
-				end
-				table.insert(parts, emit_record_stub(name, stub_fields))
+		table.sort(keys)
+		for _, k in ipairs(keys) do
+			local pp = schema.properties[k]
+			local ptype = "table"
+			-- heuristic: arrays -> { [number]: table }, else use teal_type_for_prop
+			if pp and pp.type == "array" then
+				ptype = "{ [number]: table }"
+			elseif pp and pp["$ref"] then
+				-- for $ref we default to table; runtime teal modules may provide record definitions
+				ptype = "table"
 			else
-				table.insert(parts, ("record %s end\n"):format(name))
+				ptype = teal_type_for_prop(pp)
 			end
+			table.insert(params, string.format("%s: %s", k, ptype))
+		end
+	end
+
+	-- Determine return type using the strict preferred pattern (allow no returns)
+	local ret_teal_type, is_collection = determine_return_teal_type_strict(schema.returns, schema)
+
+	-- Compose function signature
+	local param_list = "ctx: RuntimeContext"
+	if #params > 0 then
+		param_list = "ctx: RuntimeContext, " .. table.concat(params, ", ")
+	end
+
+	local func_name = "main"
+	if schema.title and #schema.title > 0 then
+		-- use title as function name if it looks like a valid identifier
+		local candidate = schema.title:gsub("%s+", "_"):gsub("[^%w_]", "")
+		if candidate ~= "" then
+			func_name = candidate
+		end
+	end
+
+	-- Include typed return in signature (strict)
+	table.insert(parts, string.format("local function %s(%s): %s", func_name, param_list, ret_teal_type))
+
+	-- Emit body scaffolding
+	if ret_teal_type == "nil" then
+		table.insert(parts, "  -- script declares no return value")
+		table.insert(parts, "  return nil")
+	else
+		if is_collection then
+			table.insert(parts, string.format("  local out: %s = {}", ret_teal_type))
 		else
-			local mod = modules[name] or ("falcon_measurement_lib." .. name:lower())
+			table.insert(parts, string.format("  local out: %s", ret_teal_type))
 			table.insert(
 				parts,
-				("-- NOTE: %s is provided by runtime typing module %s; using that module's types instead of emitting a stub."):format(
-					name,
-					tostring(mod)
-				)
+				"  -- TODO: populate out by calling ctx:call and returning the single MeasurementResponse"
 			)
-			table.insert(parts, "")
 		end
-	end
-
-	-- Parameters docblock
-	table.insert(parts, "-- Parameters")
-	for _, f in ipairs(fields) do
-		local pdesc = sanitize_comment(f.description)
-		local t = f.type or "any"
-		table.insert(parts, ("-- @param %s %s%s"):format(f.name, t, (pdesc ~= "" and " - " .. pdesc or "")))
-	end
-	table.insert(parts, "")
-
-	-- Determine return type if present
-	local ret_type = nil
-	if schema.returns then
-		ret_type = teal_type_for_schema_node(schema.returns)
-		local rd = sanitize_comment(schema.returns.description or "")
-		table.insert(parts, ("-- @return %s%s"):format(ret_type, (rd ~= "" and " - " .. rd or "")))
+		-- add parameter TODO comments and example usage
+		if schema.properties and type(schema.properties) == "table" then
+			for k, _ in pairs(schema.properties) do
+				table.insert(parts, ("  -- local %s = %s"):format(k, k))
+			end
+		end
 		table.insert(parts, "")
+		table.insert(parts, "  -- TODO: implement measurement logic here")
+		table.insert(parts, "  return out")
 	end
 
-	-- Build function signature
-	local param_list = { "ctx: RuntimeContext" }
-	for _, f in ipairs(fields) do
-		local t = teal_type_for_prop(f)
-		table.insert(param_list, (("%s: %s"):format(f.name, t)))
-	end
-
-	local sig
-	if ret_type then
-		sig = ("function main(%s): %s"):format(table.concat(param_list, ", "), ret_type)
-	else
-		sig = ("function main(%s): nil"):format(table.concat(param_list, ", "))
-	end
-
-	table.insert(parts, sig)
-	table.insert(parts, '  ctx:log("Starting measurement")')
-	table.insert(parts, "")
-	table.insert(parts, "  -- Example: access parameters directly by name")
-	for _, f in ipairs(fields) do
-		table.insert(parts, ("  -- local %s = %s"):format(f.name, f.name))
-	end
-	table.insert(parts, "")
-	table.insert(parts, "  -- TODO: implement measurement logic here")
-	if ret_type then
-		table.insert(parts, "  return {}")
-	else
-		table.insert(parts, "  return nil")
-	end
 	table.insert(parts, "end")
 	table.insert(parts, "")
 	table.insert(parts, "return { main = main }")
@@ -411,12 +345,13 @@ function M.emit_scripts(scriptSchemas, defs, modules, sourceLuaDir, outDir)
 		local title = s.title or s._schema_filename or "script"
 		local filename = title_to_filename(title, s._schema_filename)
 		local dest = dest_base .. path_sep .. filename
-		local content = emit_teal_for_script(s, defs or {}, modules or {}, sourceLuaDir or "lua", outDir)
+		-- emit_teal_for_script will error if schema includes returns but does not use the preferred pattern
+		local content = emit_teal_for_script(s, defs, modules, sourceLuaDir, outDir)
 		local ok, err = write_file(dest, content)
 		if not ok then
-			io.stderr:write(("teal_emitter: failed to write %s: %s\n"):format(dest, tostring(err)))
+			io.stderr:write("teal_emitter: failed to write " .. dest .. ": " .. tostring(err) .. "\n")
 		else
-			io.stderr:write(("teal_emitter: wrote %s\n"):format(dest))
+			io.stdout:write("teal_emitter: wrote " .. dest .. "\n")
 		end
 	end
 end

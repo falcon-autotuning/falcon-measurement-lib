@@ -1,4 +1,6 @@
 {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/measure_2D_buffered.json",
   "type": "object",
   "title": "Measure_2D_Buffered",
   "description": "provides a context for scripts that generate and acquire 2D waveform data. This context is designed for experiments where a two voltages or other parameters are swept in discrete steps, from one or more instruments. It supports configuring voltage domains, sample rates, and acquisition parameters, as well as batch operations, parallel execution, and logging. Typical use cases include time-domain measurements, pulsed experiments, and waveform acquisition synchronized with parameter sweeps.",
@@ -64,15 +66,18 @@
     }
   },
   "returns": {
-    "additionalProperties": {
-      "items": {
-        "type": "number"
-      },
-      "type": "array"
-    },
-    "description": "Map from getter identifier to an array of numeric values in nA (buffered). Keys are getter identifiers.",
-    "type": "object"
-  },
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://example.com/schemas/measure_2D_buffered.json"
+    "type": "array",
+    "description": "List of MeasurementResponse with a numeric value in nA.",
+    "items": {
+      "allOf": [
+        {
+          "$ref": "../lib/measurement_response.json#/definitions/MeasurementResponse"
+        },
+        {
+          "description": "Annotates the concrete type of the MeasurementResponse value",
+          "x-valueType": "number"
+        }
+      ]
+    }
+  }
 }

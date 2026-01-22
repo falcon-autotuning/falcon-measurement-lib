@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/measurement_response.json",
+  "title": "MeasurementResponse common definition",
+  "definitions": {
+    "MeasurementResponse": {
+      "type": "object",
+      "description": "Canonical MeasurementResponse wrapper. Use an annotation x-valueType on instances to indicate the concrete type of `value()`.",
+      "properties": {
+        "instrument": {
+          "type": "string"
+        },
+        "verb": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "value": {
+          "description": "The recorded value. Concrete type is indicated in the schema instance via x-valueType (e.g. 'number', 'string', 'boolean', 'buffer').",
+          "type": [
+            "number",
+            "string",
+            "boolean",
+            "object",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

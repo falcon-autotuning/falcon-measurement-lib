@@ -1,4 +1,6 @@
 {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/get_voltage.json",
   "type": "object",
   "title": "Set_Voltage",
   "description": "Sets a voltage applied to a target",
@@ -12,7 +14,5 @@
       "description": "The voltage value to set in V",
       "type": "number"
     }
-  },
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://example.com/schemas/get_voltage.json"
+  }
 }

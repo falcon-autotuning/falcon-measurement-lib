@@ -1,4 +1,6 @@
 {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/get_voltage.json",
   "type": "object",
   "title": "Set_Trigger_Leader",
   "description": "Sets the synchronous triggered leader DAC",
@@ -8,7 +10,5 @@
       "description": "The instrument (and channel) to set to be the leader. The leader is in charge of syncing with the ADC and triggering the rest of the measurements.",
       "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
     }
-  },
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://example.com/schemas/get_voltage.json"
+  }
 }

@@ -1,18 +1,26 @@
 {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/get_number_of_samples.json",
   "type": "object",
-  "title": "Get_Sample_Rate",
-  "description": "Gets the sample rate set on the ADC",
+  "title": "Get_Number_Of_Samples",
+  "description": "Gets the number of samples of the ADC",
   "additionalProperties": false,
   "properties": {
     "getter": {
-      "description": "The instrument (and channel) to collect the sample rate from.",
+      "description": "The instrument (and channel) to collect the number of samples from",
       "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
     }
   },
   "returns": {
     "description": "The numeric value gotten in units of samples/msec.",
-    "type": "number"
-  },
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://example.com/schemas/get_voltage.json"
+    "allOf": [
+      {
+        "$ref": "../lib/measurement_response.json#/definitions/MeasurementResponse"
+      },
+      {
+        "description": "Annotates the concrete type of the MeasurementResponse value",
+        "x-valueType": "number"
+      }
+    ]
+  }
 }
