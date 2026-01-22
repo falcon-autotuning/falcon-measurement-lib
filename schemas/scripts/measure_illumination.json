@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://example.com/schemas/measure_get_set.json",
+  "$id": "https://example.com/schemas/measure_illumination.json",
   "type": "object",
   "title": "Measure_Illumination",
   "description": "Provides a context for scripts that perform Illumination to reset their quantum dot devices.",

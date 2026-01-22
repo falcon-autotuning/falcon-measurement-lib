@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://example.com/schemas/measure_get_set.json",
+  "$id": "https://example.com/schemas/measure_current.json",
   "type": "object",
   "title": "Measure_Current",
   "description": "Provides a context for scripts that perform DC get operations. This context is typically used for scripts that need to set outputs and acquire data points from instruments in a coordinated way.",

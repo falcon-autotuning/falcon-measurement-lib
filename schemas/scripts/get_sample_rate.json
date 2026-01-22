@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://example.com/schemas/get_number_of_samples.json",
+  "$id": "https://example.com/schemas/get_sample_rate.json",
   "type": "object",
-  "title": "Get_Number_Of_Samples",
+  "title": "Get_Sample_Rate",
   "description": "Gets the number of samples of the ADC",
   "additionalProperties": false,
   "properties": {

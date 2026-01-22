@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://example.com/schemas/get_voltage.json",
+  "$id": "https://example.com/schemas/get_trigger_leader.json",
   "type": "object",
   "title": "Get_Trigger_Leader",
   "description": "Gets the synchronous triggered leader DAC",
