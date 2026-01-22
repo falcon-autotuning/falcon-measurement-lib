@@ -1,100 +1,63 @@
-name: Generate and publish artifacts (Lua generator)
+name: Generate and package (Makefile)
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
-  release:
-    types: [published]
-
-env:
-  VERSION_FILE: VERSION
-  OUT_DIR: generated
+  push:
+    branches:
+      - master
 
 jobs:
   generate:
     runs-on: ubuntu-latest
+    env:
+      VERSION_FILE: VERSION
+      OUT_DIR: generated
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Lua + luarocks + deps
+      - name: Install system packages (Lua + luarocks + build tools)
         run: |
           sudo apt-get update
-          sudo apt-get install -y lua5.3 luarocks
-          luarocks install luafilesystem
-          luarocks install dkjson
+          # Try to install Lua 5.4 if available, fall back to 5.3
+          sudo apt-get install -y lua5.4 luarocks make build-essential libreadline-dev tar gzip || sudo apt-get install -y lua5.3 luarocks make build-essential libreadline-dev tar gzip
+        shell: bash
 
-      - name: Run generator and package
+      - name: Show lua/luarocks versions (debug)
         run: |
-          make clean || true
-          make generate
-          make package-all
+          echo "Which lua:"
+          which lua || true
+          lua -v || true
+          echo
+          echo "luarocks:"
+          luarocks --version || true
+        shell: bash
 
-      - name: Upload artifacts
+      - name: Run Makefile to create venv, generate, and package
+        # Makefile's default `all` target runs: venv -> generate -> package-all
+        run: |
+          # Make is invoked from repository root; Makefile uses VERSION file
+          make all
+        shell: bash
+
+      - name: Show generated tree (debug)
+        run: |
+          echo "generated/ directory listing:"
+          ls -la generated || true
+          echo "root tarballs:"
+          ls -la *.tar.gz *.sha256 || true
+        shell: bash
+
+      - name: Upload generated directory artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lua-lib
-          path: lua-lib-*.tar.gz
+          name: generated
+          path: generated
 
-      - name: Upload go-types artifact
+      - name: Upload package tarballs
         uses: actions/upload-artifact@v4
         with:
-          name: go-types
-          path: go-types-*.tar.gz
-
-      - name: Upload emmy artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: emmy-headers
-          path: emmy-headers-*.tar.gz
-
-      - name: Upload teal artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: teal
-          path: teal-*.tar.gz
-
-  publish_release_assets:
-    needs: generate
-    runs-on: ubuntu-latest
-    if: github.event_name == 'release' && github.event.action == 'published'
-    steps:
-      - name: Download generated artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: lua-lib
-          path: ./artifacts/lua-lib
-
-      - name: Download go-types artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: go-types
-          path: ./artifacts/go-types
-
-      - name: Download emmy-headers artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: emmy-headers
-          path: ./artifacts/emmy-headers
-
-      - name: Download teal artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: teal
-          path: ./artifacts/teal
-
-      - name: Attach to release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            artifacts/lua-lib/*.tar.gz
-            artifacts/lua-lib/*.sha256
-            artifacts/go-types/*.tar.gz
-            artifacts/go-types/*.sha256
-            artifacts/emmy-headers/*.tar.gz
-            artifacts/emmy-headers/*.sha256
-            artifacts/teal/*.tar.gz
-            artifacts/teal/*.sha256
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: packages
+          path: |
+            *.tar.gz
+            *.sha256
