@@ -4,6 +4,7 @@ SRC_LUA_DIR := lua
 LIB_TARGET := lua-lib-$(VERSION).tar.gz
 GO_TARGET := go-types-$(VERSION).tar.gz
 EMMY_TARGET := emmy-headers-$(VERSION).tar.gz
+TEAL_TARGET := teal-$(VERSION).tar.gz
 
 VERSION := $(shell cat VERSION | tr -d '\n')
 LUA_VENV := .lua_venv
@@ -55,7 +56,13 @@ package-emmy:
 	@sha256sum $(EMMY_TARGET) > $(EMMY_TARGET).sha256
 	@echo "Emmy headers packaged: $(EMMY_TARGET)"
 
-package-all: package-lua package-go package-emmy
+package-teal:
+	@echo "Packaging teal..."
+	@tar -czf $(TEAL_TARGET) -C $(OUT_DIR)/emmy .
+	@sha256sum $(TEAL_TARGET) > $(TEAL_TARGET).sha256
+	@echo "Teal packaged: $(TEAL_TARGET)"
+
+package-all: package-lua package-go package-emmy package-teal
 	@echo "All packages generated for version $(VERSION)."
 
 clean: venv-clean

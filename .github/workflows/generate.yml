@@ -16,11 +16,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install system packages (Lua + luarocks + build tools)
+      - name: Install system packages (Lua 5.4 + luarocks + build tools)
         run: |
           sudo apt-get update
-          # Try to install Lua 5.4 if available, fall back to 5.3
-          sudo apt-get install -y lua5.4 luarocks make build-essential libreadline-dev tar gzip || sudo apt-get install -y lua5.3 luarocks make build-essential libreadline-dev tar gzip
+          # Install Lua 5.4 and dev headers, plus luarocks and build tools.
+          # If lua5.4 is not available by the package cache, this will fail and you can revert
+          # to the Makefile-detection approach below.
+          sudo apt-get install -y lua5.4 liblua5.4-dev luarocks make build-essential libreadline-dev tar gzip
+          # Make sure `lua` and `luac` point to lua5.4
+          if [ -x /usr/bin/lua5.4 ]; then
+            sudo update-alternatives --install /usr/bin/lua lua /usr/bin/lua5.4 60
+            sudo update-alternatives --set lua /usr/bin/lua5.4 || true
+          fi
+          if [ -x /usr/bin/luac5.4 ]; then
+            sudo update-alternatives --install /usr/bin/luac luac /usr/bin/luac5.4 60
+            sudo update-alternatives --set luac /usr/bin/luac5.4 || true
+          fi
         shell: bash
 
       - name: Show lua/luarocks versions (debug)
