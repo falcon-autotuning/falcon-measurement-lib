@@ -1,4 +1,4 @@
-name: Generate and package (Makefile)
+name: Generate, package, and publish release
 
 on:
   workflow_dispatch:
@@ -7,11 +7,11 @@ on:
       - master
 
 jobs:
-  generate:
+  generate-and-release:
     runs-on: ubuntu-latest
     env:
-      VERSION_FILE: VERSION
       OUT_DIR: generated
+      VERSION_FILE: VERSION
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,10 +24,10 @@ jobs:
           ln -sf /usr/bin/lua5.4 ./ci-bin/lua
           ln -sf /usr/bin/luac5.4 ./ci-bin/luac
           ln -sf $(which luarocks) ./ci-bin/luarocks
-          export PATH="$PWD/ci-bin:$PATH"
-          echo "PATH=$PATH" >> $GITHUB_ENV
+          echo "$PWD/ci-bin" >> $GITHUB_PATH
           lua -v
           luarocks --version
+        shell: bash
 
       - name: Run Makefile
         run: |
@@ -42,16 +42,44 @@ jobs:
           ls -la *.tar.gz *.sha256 || true
         shell: bash
 
-      - name: Upload generated directory artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: generated
-          path: generated
+      - name: Read version file
+        id: read_version
+        run: |
+          if [ ! -f "$VERSION_FILE" ]; then
+            echo "VERSION file missing"
+            exit 1
+          fi
+          VERSION="$(cat $VERSION_FILE | tr -d '[:space:]')"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "::set-output name=version::$VERSION"
+        shell: bash
 
-      - name: Upload package tarballs
-        uses: actions/upload-artifact@v4
+      - name: Create combined generated tarball
+        run: |
+          # Create a tarball of the whole generated/ directory for convenience
+          tar -czf generated-${{ env.VERSION }}.tar.gz -C "${{ env.OUT_DIR }}" .
+          ls -la generated-${{ env.VERSION }}.tar.gz || true
+        shell: bash
+
+      - name: Ensure package files exist
+        run: |
+          echo "Looking for expected package files (based on VERSION=${{ env.VERSION }})"
+          ls -la lua-lib-${{ env.VERSION }}.tar.gz go-types-${{ env.VERSION }}.tar.gz emmy-headers-${{ env.VERSION }}.tar.gz || true
+        shell: bash
+
+      - name: Create / update GitHub Release and upload assets
+        # ncipollo/release-action is simple: it will create or update the release and attach files
+        uses: ncipollo/release-action@v1
         with:
-          name: packages
-          path: |
-            *.tar.gz
-            *.sha256
+          tag: v${{ env.VERSION }}
+          name: Release v${{ env.VERSION }}
+          body: |
+            Automated generated artifacts for version v${{ env.VERSION }}.
+            This release contains generated runtime Lua modules, Emmy headers, and Go types.
+          files: |
+            lua-lib-${{ env.VERSION }}.tar.gz
+            go-types-${{ env.VERSION }}.tar.gz
+            emmy-headers-${{ env.VERSION }}.tar.gz
+            generated-${{ env.VERSION }}.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
