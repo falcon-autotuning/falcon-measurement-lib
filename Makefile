@@ -1,12 +1,13 @@
-# Makefile (updated to call Lua generator)
+
 OUT_DIR := generated
 SRC_LUA_DIR := lua
+VERSION := $(shell cat VERSION | tr -d '\n')
+
 LIB_TARGET := lua-lib-$(VERSION).tar.gz
 GO_TARGET := go-types-$(VERSION).tar.gz
 EMMY_TARGET := emmy-headers-$(VERSION).tar.gz
 TEAL_TARGET := teal-$(VERSION).tar.gz
 
-VERSION := $(shell cat VERSION | tr -d '\n')
 LUA_VENV := .lua_venv
 LUA_VENV_BIN := $(LUA_VENV)/bin
 LUA_VENV_TREE := $(LUA_VENV)/lua_modules
