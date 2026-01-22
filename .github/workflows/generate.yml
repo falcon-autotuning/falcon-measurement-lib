@@ -87,7 +87,7 @@ jobs:
           release_name: Release v${{ env.VERSION }}
           body: |
             Automated generated artifacts for version v${{ env.VERSION }}.
-            This release contains generated runtime Lua modules, Emmy headers, and Go types.
+            This release contains generated runtime Lua modules, Emmy headers, Go types, and teal templates.
           draft: false
           prerelease: false
 
