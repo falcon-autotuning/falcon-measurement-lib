@@ -673,6 +673,7 @@ local function emit_emmy_scripts(scripts, outDir)
 	end
 end
 
+-- Generate Go types & helpers (single-file)
 -- Generates Go types & helpers (single-file)
 local function generate_go_types_and_helpers(defs, scripts, outDir)
 	local lines = {}
