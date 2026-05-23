@@ -21,10 +21,10 @@ venv:
 	@mkdir -p $(LUA_VENV_BIN)
 	@mkdir -p $(LUA_VENV_TREE)
 	@echo '#!/bin/sh' > $(LUA_VENV_BIN)/lua
-	@echo 'LUA_PATH="$(LUA_VENV_TREE)/share/lua/5.4/?.lua;$(LUA_VENV_TREE)/share/lua/5.4/?/init.lua;;" LUA_CPATH="$(LUA_VENV_TREE)/lib/lua/5.4/?.so;;" exec lua "$$@"' >> $(LUA_VENV_BIN)/lua
+	@echo 'LUA_PATH="$(LUA_VENV_TREE)/share/lua/5.4/?.lua;$(LUA_VENV_TREE)/share/lua/5.4/?/init.lua;;" LUA_CPATH="$(LUA_VENV_TREE)/lib/lua/5.4/?.so;;" exec lua5.4 "$$@"' >> $(LUA_VENV_BIN)/lua
 	@chmod +x $(LUA_VENV_BIN)/lua
 	@echo '#!/bin/sh' > $(LUA_VENV_BIN)/luarocks
-	@echo 'LUAROCKS_TREE="$(LUA_VENV_TREE)" exec luarocks --tree="$(LUA_VENV_TREE)" "$$@"' >> $(LUA_VENV_BIN)/luarocks
+	@echo 'LUAROCKS_TREE="$(LUA_VENV_TREE)" exec luarocks --tree="$(LUA_VENV_TREE)" --lua-version=5.4 "$$@"' >> $(LUA_VENV_BIN)/luarocks
 	@chmod +x $(LUA_VENV_BIN)/luarocks
 	@echo "Installing Lua dependencies (dkjson, luafilesystem)..."
 	@$(LUA_VENV_BIN)/luarocks install dkjson
