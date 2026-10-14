@@ -6,7 +6,7 @@
   "description": "Sets the sample rate on the ADC",
   "additionalProperties": false,
   "properties": {
-    "getter": {
+    "setter": {
       "description": "The instrument (and channel) to collect the sample rate from.",
       "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
     },

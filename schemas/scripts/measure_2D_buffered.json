@@ -13,10 +13,6 @@
       "description": "Buffered Instruments to write to. These are the targets whose voltages or parameters are set for each step in the x sweep.",
       "type": "array"
     },
-    "sampleRate": {
-      "description": "Sampling rate in Hz. Defines the rate at which waveform data is sampled during acquisition.",
-      "type": "number"
-    },
     "bufferedGetters": {
       "items": {
         "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
@@ -56,13 +52,6 @@
     "numYSteps": {
       "description": "Number of steps in the y axis waveform. Determines how many discrete parameter values will be swept.",
       "type": "integer"
-    },
-    "setters": {
-      "items": {
-        "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
-      },
-      "description": "Instruments to write to. These are the targets whose voltages or parameters are set once during the operation.",
-      "type": "array"
     }
   },
   "returns": {

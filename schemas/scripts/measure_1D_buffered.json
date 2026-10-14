@@ -6,17 +6,6 @@
   "description": "Provides a context for scripts that generate and acquire 1D waveform data. This context is designed for experiments where a voltage or other parameter is swept in discrete steps, from one or more instruments. It supports configuring voltage domains, sample rates, and acquisition parameters, as well as batch operations, parallel execution, and logging. Typical use cases include time-domain measurements, pulsed experiments, and waveform acquisition synchronized with parameter sweeps.",
   "additionalProperties": false,
   "properties": {
-    "sampleRate": {
-      "description": "Sampling rate in Hz. Defines the rate at which waveform data is sampled during acquisition.",
-      "type": "number"
-    },
-    "setters": {
-      "items": {
-        "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
-      },
-      "description": "Instruments to write to. These are the targets whose voltages or parameters are set once during the operation.",
-      "type": "array"
-    },
     "setVoltageDomains": {
       "additionalProperties": {
         "$ref": "../lib/domain.json#/definitions/Domain"
@@ -24,7 +13,7 @@
       "description": "Voltage ranges per channel. This table maps instrument target identifiers to their allowed or intended voltage sweep domains.",
       "type": "object"
     },
-    "bufferedGetters": {
+    "getters": {
       "items": {
         "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
       },
@@ -39,7 +28,7 @@
       "description": "Number of steps in the waveform. Determines how many discrete parameter values will be swept.",
       "type": "integer"
     },
-    "bufferedSetters": {
+    "setters": {
       "items": {
         "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
       },

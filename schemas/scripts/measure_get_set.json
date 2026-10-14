@@ -13,10 +13,6 @@
       "description": "Table mapping instrument target identifiers (as strings) to voltage values to set in V.",
       "type": "object"
     },
-    "sampleRate": {
-      "description": "Sampling rate in Hz. Defines the rate at which waveform data is sampled during acquisition.",
-      "type": "number"
-    },
     "numPoints": {
       "descriptions": "Number of points to acquire per datapoint. Specifies the length of each acquired waveform.",
       "type": "integer"
