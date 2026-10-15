@@ -10,12 +10,9 @@
       "descriptions": "Number of points to acquire per datapoint. Specifies the length of each acquired waveform.",
       "type": "integer"
     },
-    "getters": {
-      "items": {
-        "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
-      },
-      "description": "Instruments to read from.",
-      "type": "array"
+    "getter": {
+      "description": "The instrument (and channel) to collect the applied current from",
+      "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
     }
   },
   "returns": {
