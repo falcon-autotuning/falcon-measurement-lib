@@ -20,10 +20,6 @@
       "description": "Buffered Instruments to read from. These are the sources from which waveform data will be acquired at each step.",
       "type": "array"
     },
-    "numPoints": {
-      "descriptions": "Number of points to acquire per datapoint. Specifies the length of each acquired waveform.",
-      "type": "integer"
-    },
     "numSteps": {
       "description": "Number of steps in the waveform. Determines how many discrete parameter values will be swept.",
       "type": "integer"

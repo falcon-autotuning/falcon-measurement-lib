@@ -45,10 +45,6 @@
       "description": "X Voltage ranges per channel. This table maps instrument target identifiers to their allowed or intended voltage sweep domains.",
       "type": "object"
     },
-    "numPoints": {
-      "descriptions": "Number of points to acquire per datapoint. Specifies the length of each acquired waveform.",
-      "type": "integer"
-    },
     "numYSteps": {
       "description": "Number of steps in the y axis waveform. Determines how many discrete parameter values will be swept.",
       "type": "integer"

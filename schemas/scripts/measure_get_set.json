@@ -13,10 +13,6 @@
       "description": "Table mapping instrument target identifiers (as strings) to voltage values to set in V.",
       "type": "object"
     },
-    "numPoints": {
-      "descriptions": "Number of points to acquire per datapoint. Specifies the length of each acquired waveform.",
-      "type": "integer"
-    },
     "getters": {
       "items": {
         "$ref": "../lib/instrument_target.json#/definitions/InstrumentTarget"
